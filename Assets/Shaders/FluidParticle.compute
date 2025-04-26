@@ -1,0 +1,52 @@
+#pragma kernel CSMain
+
+//#include "UnityCG.cginc"
+
+struct Particle
+{
+    float3 position;
+    float3 velocity;
+};
+
+RWStructuredBuffer<Particle> _Particles;
+float _DeltaTime;
+float _Gravity;
+float3 _AreaCenter;
+float3 _AreaSize;
+
+
+float rand(float2 seed)
+{
+    return frac(sin(dot(seed, float2(12.9898, 78.233))) * 43758.5453);
+}
+
+[numthreads(64, 1, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    Particle p = _Particles[id.x];
+    
+    p.velocity.y -= _Gravity * _DeltaTime;
+    
+    p.position += p.velocity * _DeltaTime;
+    
+    float3 minBound = _AreaCenter - _AreaSize;
+    float3 maxBound = _AreaCenter + _AreaSize;
+    
+    if (p.position.x < minBound.x || p.position.x > maxBound.x)
+    {
+        p.velocity.x *= -0.8;
+        p.position.x = clamp(p.position.x, minBound.x, maxBound.x);
+    }
+    if (p.position.y < minBound.y || p.position.y > maxBound.y)
+    {
+        p.velocity.y *= -0.8;
+        p.position.y = clamp(p.position.y, minBound.y, maxBound.y);
+    }
+    if (p.position.z < minBound.z || p.position.z > maxBound.z)
+    {
+        p.velocity.z *= -0.8;
+        p.position.z = clamp(p.position.z, minBound.z, maxBound.z);
+    }
+    
+    _Particles[id.x] = p;
+}
