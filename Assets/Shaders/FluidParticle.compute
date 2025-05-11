@@ -1,4 +1,6 @@
-#pragma kernel CSMain
+#pragma kernel CalculateDensity
+#pragma kernel CalculateVelocity
+#pragma kernel CalculatePosition
 
 //#include "UnityCG.cginc"
 
@@ -8,26 +10,323 @@ struct Particle
     float3 velocity;
 };
 
+
+// imformation of particles
 RWStructuredBuffer<Particle> _Particles;
-float _DeltaTime;
+float _ParticleMass;
+float _ParticleCount;
+float _ParticleRadius;
 float _Gravity;
+// imformation of density
+RWStructuredBuffer<float> _Density;
+float _TargetDensity;
+RWStructuredBuffer<float3> _PredictPosition;
+// imformation of pressure
+float _PressureMultiplier;
+// imformation of vicosity
+float _ViscosityStrength;
+// imformation of area
 float3 _AreaCenter;
 float3 _AreaSize;
+// other imformation
+float _DeltaTime;
+// hash table
+RWStructuredBuffer<int> _HashTable;
 
 
+#define PI 3.14159
+
+// Pow Function
+static float Pow2(float value)
+{
+    return value * value;
+}
+static float Pow3(float value)
+{
+    return value * value *value;
+}
+static float Pow4(float value)
+{
+    return value * value * value * value;
+}
+static float Pow6(float value)
+{
+    return value * value * value * value * value * value;
+}
+static float Pow8(float value)
+{
+    return value * value * value * value * value * value * value * value;
+}
+static float Pow9(float value)
+{
+    return value * value * value * value * value * value * value * value * value;
+}
+
+// Rand Function
 float rand(float2 seed)
 {
     return frac(sin(dot(seed, float2(12.9898, 78.233))) * 43758.5453);
 }
 
+// Hash
+static float3 PositionToCellCoord(float3 position)
+{
+    return float3(floor((position - _AreaCenter + _AreaSize) / 1.1 * _ParticleRadius));
+}
+
+static int CellCoordToCellHash(float3 cellCoord)
+{
+    const int p1 = 73856093;
+    const int p2 = 19349663;
+    const int p3 = 83492791;
+    return (cellCoord.x * p1) + (cellCoord.y * p2) + (cellCoord.z * p3);
+}
+
+// TODO: Solve the hash collision
+static int CellHashToHashKey(int cellHash)
+{
+    return cellHash % 8191;
+}
+static int CalculateHashKey(float3 position)
+{
+    return CellHashToHashKey(CellCoordToCellHash(PositionToCellCoord(position)));
+}
+
+
+// DistributionFunctionKernel
+static float ViscositySmoothingKernel(float dst, float radius)
+{
+    float volumn = PI * Pow8(radius) / 4;
+    float value = max(0, radius * radius - dst * dst);
+    return value * value * value / volumn;
+}
+
+static float FunctionKernel3D(float dst, float radius)
+{
+    float volumn = PI * Pow6(radius) / 15;
+    float value = max(0, radius - dst);
+    return value * value * value / volumn;
+}
+
+static float FunctionKernelDerivative3D(float dst, float radius)
+{
+    // TODO;
+    if (dst > radius)
+        return 0;
+    float f = radius - dst;
+    float scale = -45 / (PI * Pow6(radius));
+    return scale * dst * f * f;
+}
+
+static float Function2(float dst, float radius)
+{
+    float volumn = 64 * PI * Pow9(radius) / 315;
+    float value = max(0, radius * radius - dst * dst);
+    return value * value * value / volumn;
+}
+
+static float FunctionDerivative2(float dst, float radius)
+{
+    // TODO;
+    if (dst > radius)
+        return 0;
+    if(dst<0.5)
+        return -100;
+    float f = radius * radius - dst * dst;
+    float scale = -945 / (32 * PI * Pow9(radius));
+    return scale * dst * f * f;
+}
+
+static float SmoothingKernel2D(float dst, float radius)
+{
+    float volumn = PI * Pow8(radius) / 4;
+    float value = max(0, radius * radius - dst * dst);
+    return value * value * value / volumn;
+}
+
+static float SharpingKernel2D(float dst, float radius)
+{
+    float volumn = PI * Pow4(radius) / 2;
+    float value = max(0, radius - dst);
+    return value * value * value / volumn;
+}
+
+static float SmoothingKernelDerivative2D(float dst, float radius)
+{
+    if (dst > radius)
+        return 0;
+    if (dst < 0.1)
+        return -10;
+    float f = radius * radius - dst * dst;
+    float scale = -24 / (PI * Pow8(radius));
+    return scale * dst * f * f;
+}
+
+static float SharpingKernelDerivative2D(float dst, float radius)
+{
+    if (dst > radius)
+        return 0;
+    float f = radius - dst;
+    float scale = -6 / (PI * Pow4(radius));
+    return scale * f * f;
+}
+
+static float ConvertDensityToPressure(float density)
+{
+    float densityError = density - _TargetDensity;
+    float pressure = densityError * _PressureMultiplier;
+    //float pressure = max(0, densityError) * _PressureMultiplier;
+    return pressure;
+}
+
+static float CalculateDensity3D(float3 position)
+{
+    float density = 0;
+    float mass = _ParticleMass;
+    for (int i = 0; i < _ParticleCount; i++)
+    {
+        float dst = length(_Particles[i].position - position);
+        float influence = FunctionKernel3D(dst, _ParticleRadius);
+        density += mass * influence;
+    }
+    return density;
+}
+
+float CalculateDensity2D(float3 position)
+{
+    float density = 0;
+    float mass = _ParticleMass;
+    for (int i = 0; i < _ParticleCount; i++)
+    {
+        float dst = length(_Particles[i].position - position);
+        float influence = SharpingKernel2D(dst, _ParticleRadius);
+        density += mass * influence;
+    }
+    return density;
+}
+
+static float CalculateProperty(float3 position)
+{
+    float property = 0;
+    float mass = _ParticleMass;
+    for (int i = 0; i < _ParticleCount; i++) 
+    {
+        float dst = length(_Particles[i].position - position);
+        float influence = 0.1;
+        float density = _Density[i];
+        property += property * mass * influence / density;
+    }
+    return property;
+}
+
+static float CalculateSharedPressure(float densityA, float densityB)
+{
+    float pressureA = ConvertDensityToPressure(densityA);
+    float pressureB = ConvertDensityToPressure(densityB);
+    return (pressureA + pressureB) / 2;
+}
+
+static float3 CalculatePressureForce2D(int particleIndex)
+{
+    float3 pressureForce = float3(0.0, 0.0, 0.0);
+    float mass = _ParticleMass;
+    for (int otherParticleIndex = 0; otherParticleIndex < _ParticleCount; otherParticleIndex++)
+    {
+        if (particleIndex == otherParticleIndex) continue;
+        
+        //float3 offset = _Particles[otherParticleIndex].position - _Particles[particleIndex].position;
+        float3 offset = _Particles[otherParticleIndex].position - _PredictPosition[particleIndex];
+        float dst = length(offset);
+        
+        float3 dir = dst == 0 ? float3(1, 0, 0) : offset / dst;
+        float slope = SharpingKernelDerivative2D(dst, _ParticleRadius);
+        float density = _Density[otherParticleIndex];
+        float sharedPressure = CalculateSharedPressure(density,_Density[particleIndex]);
+        pressureForce += sharedPressure * dir * mass * slope / density;
+        //pressureForce += ConvertDensityToPressure(density) * dir * mass * slope / density;
+        //pressureForce += slope * dir/10;
+    }
+    return pressureForce;
+}
+
+static float3 CalculatePressureForce3D(int particleIndex)
+{
+    float3 pressureForce = float3(0.0, 0.0, 0.0);
+    float mass = _ParticleMass;
+    for (int otherParticleIndex = 0; otherParticleIndex < _ParticleCount; otherParticleIndex++)
+    {
+        if (particleIndex == otherParticleIndex)
+            continue;
+        
+        float3 offset = _Particles[otherParticleIndex].position - _Particles[particleIndex].position;
+        float dst = length(offset);
+        
+        float3 dir = dst == 0 ? float3(1,0,0) : offset / dst;
+        float slope = FunctionKernelDerivative3D(dst, _ParticleRadius);
+        float density = _Density[otherParticleIndex];
+        float sharedPressure = CalculateSharedPressure(density, _Density[particleIndex]);
+        pressureForce += sharedPressure * dir * mass * slope / density;
+        //pressureForce += ConvertDensityToPressure(density) * dir * mass * slope / density;
+        //pressureForce += slope * dir;
+    }
+    return pressureForce;
+}
+
+static float3 CalculateViscosityForce(int particleIndex)
+{
+    float3 viscosityForce = float3(0.0, 0.0, 0.0);
+    Particle p = _Particles[particleIndex];
+    float3 position = p.position;
+    for (int i = 0; i < _ParticleCount; i++)
+    {
+        Particle otherParticle = _Particles[i];
+        float dst = length(otherParticle.position - position);
+        float influence = ViscositySmoothingKernel(dst, _ParticleRadius);
+        viscosityForce -= (p.velocity - otherParticle.velocity) * influence;
+
+    }
+    return viscosityForce * _ViscosityStrength;
+}
+
+
 [numthreads(64, 1, 1)]
-void CSMain(uint3 id : SV_DispatchThreadID)
+void CalculateDensity(uint3 id : SV_DispatchThreadID)
+{
+    Particle p = _Particles[id.x];
+    //float3 predictPosition = p.position + p.velocity * _DeltaTime;
+    _PredictPosition[id.x] = p.position + p.velocity * 1 / 120.0f;
+    _Density[id.x] = CalculateDensity2D(_PredictPosition[id.x]);
+    _HashTable[id.x] = CalculateHashKey(p.position);
+    //_Density[id.x] = CalculateDensity2D(p.position);
+}
+
+
+[numthreads(64, 1, 1)]
+void CalculateVelocity(uint3 id : SV_DispatchThreadID)
 {
     Particle p = _Particles[id.x];
     
-    p.velocity.y -= _Gravity * _DeltaTime;
+    // calVelocity
+    float3 pressureForce = CalculatePressureForce2D(id.x);
+    float3 pressureAcceleration = pressureForce / _Density[id.x];
+    float3 viscosityForce = CalculateViscosityForce(id.x);
+    float3 viscosityAcceleration = viscosityForce / _Density[id.x];
     
+    p.velocity.x -= _Gravity * _DeltaTime;
+    p.velocity += pressureAcceleration * _DeltaTime;
+    p.velocity += viscosityAcceleration * _DeltaTime;
+    
+    _Particles[id.x] = p;
+}
+
+
+
+[numthreads(64,1,1)]
+void CalculatePosition(uint3 id:SV_DispatchThreadID)
+{
+    Particle p = _Particles[id.x];
     p.position += p.velocity * _DeltaTime;
+    //p.position.y = _Density[id.x];
     
     float3 minBound = _AreaCenter - _AreaSize;
     float3 maxBound = _AreaCenter + _AreaSize;
@@ -35,18 +334,22 @@ void CSMain(uint3 id : SV_DispatchThreadID)
     if (p.position.x < minBound.x || p.position.x > maxBound.x)
     {
         p.velocity.x *= -0.8;
+        //p.velocity = 0;
         p.position.x = clamp(p.position.x, minBound.x, maxBound.x);
+        
     }
+    
     if (p.position.y < minBound.y || p.position.y > maxBound.y)
     {
         p.velocity.y *= -0.8;
+        //p.velocity = 0;
         p.position.y = clamp(p.position.y, minBound.y, maxBound.y);
     }
     if (p.position.z < minBound.z || p.position.z > maxBound.z)
     {
         p.velocity.z *= -0.8;
+        //p.velocity = 0;
         p.position.z = clamp(p.position.z, minBound.z, maxBound.z);
     }
-    
     _Particles[id.x] = p;
 }
