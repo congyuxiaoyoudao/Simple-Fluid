@@ -1,0 +1,89 @@
+#pragma kernel CSMain
+
+// Input: Depth texture from the previous pass
+// The PBFRenderPass sets this globally using ShaderPropertyId.FluidDepth
+Texture2D<float> _FluidDepthTexture; // Assuming depth is stored in the R channel as float
+
+// Output: Normal texture
+RWTexture2D<float4> _FluidNormalTexture;
+
+// Camera parameters (set by the C# pass)
+float4 _ScreenParams; // x: width, y: height, z: 1/width, w: 1/height
+float4x4 _CameraToWorld; // View to world matrix
+float4x4 _InverseProjection; // Inverse projection matrix
+
+// Thread group size (define based on your kernel, e.g., 8x8)
+#pragma thread_group_size 8 8 1
+
+// Helper function to reconstruct view-space position from depth and screen coordinates
+float3 ReconstructViewSpacePosition(uint2 id, float depth)
+{
+    // Convert pixel coordinates to UV
+    float2 uv = (id.xy + 0.5) * _ScreenParams.zw; // Add 0.5 for pixel center
+
+    // Convert UV to normalized device coordinates (NDC) [-1, 1]
+    float2 ndc_xy = uv * 2.0 - 1.0;
+
+    // Unproject NDC and depth using the inverse projection matrix
+    // The W component after multiplication by _InverseProjection gives the view-space Z
+    float4 viewPos = mul(_InverseProjection, float4(ndc_xy, depth, 1.0));
+
+    // Perform perspective divide to get view-space position
+    return viewPos.xyz / viewPos.w;
+}
+
+[numthreads(8,8,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    // Get screen dimensions
+    uint width = _ScreenParams.x;
+    uint height = _ScreenParams.y;
+
+    // Check bounds
+    if (id.x >= width || id.y >= height)
+    {
+        return;
+    }
+
+    // Read depths at the current pixel and neighbors
+    float centerDepth = _FluidDepthTexture[id.xy];
+
+    // Define pixel offsets for neighbors
+    int2 dx = int2(1, 0);
+    int2 dy = int2(0, 1);
+
+    // Read neighbor depths (handle boundary cases if necessary, simple wrap here)
+    // In a real scenario, you might clamp or use conditional reads
+    float depth_x_plus = _FluidDepthTexture[clamp(id.xy + dx, 0, int2(width - 1, height - 1))];
+    float depth_x_minus = _FluidDepthTexture[clamp(id.xy - dx, 0, int2(width - 1, height - 1))];
+    float depth_y_plus = _FluidDepthTexture[clamp(id.xy + dy, 0, int2(width - 1, height - 1))];
+    float depth_y_minus = _FluidDepthTexture[clamp(id.xy - dy, 0, int2(width - 1, height - 1))];
+
+    // Reconstruct view-space positions for center and neighbors
+    float3 pos_center = ReconstructViewSpacePosition(id.xy, centerDepth);
+    float3 pos_x_plus = ReconstructViewSpacePosition(id.xy + dx, depth_x_plus);
+    float3 pos_x_minus = ReconstructViewSpacePosition(id.xy - dx, depth_x_minus);
+    float3 pos_y_plus = ReconstructViewSpacePosition(id.xy + dy, depth_y_plus);
+    float3 pos_y_minus = ReconstructViewSpacePosition(id.xy - dy, depth_y_minus);
+
+    // Calculate tangent and bitangent vectors using position differences
+    // The difference vector points from one point to another
+    float3 tangent = pos_x_plus - pos_x_minus; // Difference along the x-axis in view space
+    float3 bitangent = pos_y_plus - pos_y_minus; // Difference along the y-axis in view space
+
+    // Calculate view-space normal using the cross product
+    // Note: The order of cross product depends on the coordinate system handedness.
+    // For a right-handed view space (common in Unity), cross(bitangent, tangent) gives the correct normal direction.
+    // Or normalize(cross(normalize(pos_x_plus - pos_center), normalize(pos_y_plus - pos_center))) for a potentially more robust but slower approach.
+    // Using neighbor differences is standard for calculating derivatives.
+    float3 normal_view = normalize(cross(bitangent, tangent)); // Assuming right-handed view space
+
+    // Transform the view-space normal to world space
+    // Note: When transforming vectors (normals, tangents), use the 3x3 part of the matrix
+    // and do not include the translation component.
+    float3 normal_world = normalize(mul((float3x3)_CameraToWorld, normal_view));
+
+    // Store the world-space normal in the output texture
+    // Map the normal vector [-1, 1] range to [0, 1] range for storage in an 8-bit texture format (like ARGB32)
+    _FluidNormalTexture[id.xy] = float4(normal_world * 0.5 + 0.5, 1.0);
+}
