@@ -1,4 +1,4 @@
-Shader "PBF/FluidDpeth"
+Shader "PBF/FluidDepth"
 {
     Properties
     {
@@ -54,10 +54,10 @@ Shader "PBF/FluidDpeth"
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
-            struct FSOutput {
-                float4 depth : SV_TARGET0;
-                float4 color : SV_TARGET1;
-            };
+            // struct FSOutput {
+            //     float4 depth : SV_Target0;
+            //     float4 color : SV_Target1;
+            // };
             
             static float2 TransformUV(float2 uv)
             {
@@ -93,9 +93,9 @@ Shader "PBF/FluidDpeth"
                 return output;
             }
 
-            FSOutput FS (Varyings input) : SV_Target
+            float FS (Varyings input) : SV_Target
             {
-                FSOutput output;
+                // FSOutput output;
                 
                 // Trransform uv origin to quad center
                 float2 quadUV = TransformUV(input.uv);
@@ -108,10 +108,10 @@ Shader "PBF/FluidDpeth"
                 float3 sphereNormalVS = ComputeSphereNormal(quadUV);
 
                 // base shading
-                Light mainLight = GetMainLight();
-                float3 lightDirVS = mul((float3x3)UNITY_MATRIX_V, mainLight.direction);
-                float3 diffuse = _Color.xyz * max(0,dot(lightDirVS, sphereNormalVS));
-                output.color=float4(diffuse,1.0);
+                // Light mainLight = GetMainLight();
+                // float3 lightDirVS = mul((float3x3)UNITY_MATRIX_V, mainLight.direction);
+                // float3 diffuse = _Color.xyz * max(0,dot(lightDirVS, sphereNormalVS));
+                // output.color=float4(diffuse,1.0);
                 
                 // compute depth
                 float4 fragPosVS = float4(input.positionVS.xyz + sphereNormalVS * _Size,1.0);
@@ -121,9 +121,10 @@ Shader "PBF/FluidDpeth"
                 #if defined(UNITY_REVERSED_Z)
                     depth = 1.0f - depth; //d3d, metal to do it
                 #endif
-                output.depth = float4(depth.xxx,1.0);
+                return depth;
+                // output.depth = float4(depth.xxx,1.0);
                 // return float4(quadUV, 0, 1);
-                return output;
+                // return output;
             }
             ENDHLSL
         }
