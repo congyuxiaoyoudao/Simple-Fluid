@@ -312,7 +312,7 @@ void CalculateVelocity(uint3 id : SV_DispatchThreadID)
     float3 viscosityForce = CalculateViscosityForce(id.x);
     float3 viscosityAcceleration = viscosityForce / _Density[id.x];
     
-    p.velocity.x -= _Gravity * _DeltaTime;
+    p.velocity.y -= _Gravity * _DeltaTime;
     p.velocity += pressureAcceleration * _DeltaTime;
     p.velocity += viscosityAcceleration * _DeltaTime;
     
