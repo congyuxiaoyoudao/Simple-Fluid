@@ -83,7 +83,13 @@ public class PBFReconstructNormalPass : ScriptableRenderPass
             var cameraData = renderingData.cameraData;
             var camera = cameraData.camera;
 
-            cmd.SetComputeVectorParam(normalComputeShader, ShaderPropertyId.ScreenParams, new Vector4(cameraData.cameraTargetDescriptor.width, cameraData.cameraTargetDescriptor.height, 1.0f / cameraData.cameraTargetDescriptor.width, 1.0f / cameraData.cameraTargetDescriptor.height));
+            // screen params
+            int width = cameraData.cameraTargetDescriptor.width;
+            int height = cameraData.cameraTargetDescriptor.height;
+            float inv_width = 1.0f / width;
+            float inv_height = 1.0f / height;
+            
+            cmd.SetComputeVectorParam(normalComputeShader, ShaderPropertyId.ScreenParams, new Vector4(width, height, inv_width, inv_height));
             cmd.SetComputeMatrixParam(normalComputeShader, ShaderPropertyId.CameraToWorld, camera.cameraToWorldMatrix);
             cmd.SetComputeMatrixParam(normalComputeShader, ShaderPropertyId.InverseProjection, camera.projectionMatrix.inverse);
             // You might also need camera position: cmd.SetComputeVector(normalComputeShader, ShaderPropertyId.WorldSpaceCameraPos, camera.transform.position);
@@ -93,9 +99,6 @@ public class PBFReconstructNormalPass : ScriptableRenderPass
             normalComputeShader.GetKernelThreadGroupSizes(m_KernelHandle, out xGroupSize, out yGroupSize, out zGroupSize);
 
             // Calculate dispatch dimensions
-            int width = cameraData.cameraTargetDescriptor.width;
-            int height = cameraData.cameraTargetDescriptor.height;
-
             int dispatchX = Mathf.CeilToInt((float)width / xGroupSize);
             int dispatchY = Mathf.CeilToInt((float)height / yGroupSize);
             int dispatchZ = 1; // Assuming a 2D texture processing

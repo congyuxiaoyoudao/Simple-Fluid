@@ -16,17 +16,19 @@ float4x4 _InverseProjection; // Inverse projection matrix
 #pragma thread_group_size 8 8 1
 
 // Helper function to reconstruct view-space position from depth and screen coordinates
-float3 ReconstructViewSpacePosition(uint2 id, float depth)
+float3 ReconstructViewSpacePosition(uint2 screenCoord, float depth)
 {
-    // Convert pixel coordinates to UV
-    float2 uv = (id.xy + 0.5) * _ScreenParams.zw; // Add 0.5 for pixel center
+    // screenCoord 0...width-1, 0...height-1
+    // Convert pixel coordinates to UV [0, 1]
+    float2 screenUV = (screenCoord.xy + 0.5f) * _ScreenParams.zw; // Add 0.5 for pixel center
 
     // Convert UV to normalized device coordinates (NDC) [-1, 1]
-    float2 ndc_xy = uv * 2.0 - 1.0;
-
+    float2 ndcXY = screenUV * 2.0 - 1.0;
+    float3 ndcPos = float3(ndcXY, depth * 2.0 - 1.0);
+    
     // Unproject NDC and depth using the inverse projection matrix
     // The W component after multiplication by _InverseProjection gives the view-space Z
-    float4 viewPos = mul(_InverseProjection, float4(ndc_xy, depth, 1.0));
+    float4 viewPos = mul(_InverseProjection, float4(ndcPos, 1.0));
 
     // Perform perspective divide to get view-space position
     return viewPos.xyz / viewPos.w;
@@ -61,6 +63,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 
     // Reconstruct view-space positions for center and neighbors
     float3 pos_center = ReconstructViewSpacePosition(id.xy, centerDepth);
+    // _FluidNormalTexture[screenCoord] =pos_center.x;
     float3 pos_x_plus = ReconstructViewSpacePosition(id.xy + dx, depth_x_plus);
     float3 pos_x_minus = ReconstructViewSpacePosition(id.xy - dx, depth_x_minus);
     float3 pos_y_plus = ReconstructViewSpacePosition(id.xy + dy, depth_y_plus);
@@ -76,14 +79,31 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     // For a right-handed view space (common in Unity), cross(bitangent, tangent) gives the correct normal direction.
     // Or normalize(cross(normalize(pos_x_plus - pos_center), normalize(pos_y_plus - pos_center))) for a potentially more robust but slower approach.
     // Using neighbor differences is standard for calculating derivatives.
-    float3 normal_view = normalize(cross(bitangent, tangent)); // Assuming right-handed view space
+    if(abs(pos_x_plus.z - pos_center.z) < abs(pos_x_minus.z - pos_center.z))
+    {
+        tangent = pos_x_plus - pos_center;
+    }
+    else
+    {
+        tangent = pos_center - pos_x_minus; 
+    }
+    if(abs(pos_y_plus.z - pos_center.z) < abs(pos_y_minus.z - pos_center.z))
+    {
+        bitangent = pos_y_plus - pos_center;
+    }
+    else
+    {
+        bitangent = pos_center - pos_y_minus;
+    }
+    float3 normal_view = normalize(cross(tangent,bitangent)); // Assuming right-handed view space
 
+    _FluidNormalTexture[id.xy] = float4(normal_view, 1.0);
     // Transform the view-space normal to world space
     // Note: When transforming vectors (normals, tangents), use the 3x3 part of the matrix
     // and do not include the translation component.
-    float3 normal_world = normalize(mul((float3x3)_CameraToWorld, normal_view));
+    // float3 normal_world = normalize(mul((float3x3)_CameraToWorld, normal_view));
 
     // Store the world-space normal in the output texture
     // Map the normal vector [-1, 1] range to [0, 1] range for storage in an 8-bit texture format (like ARGB32)
-    _FluidNormalTexture[id.xy] = float4(normal_world * 0.5 + 0.5, 1.0);
+    // _FluidNormalTexture[id.xy] = float4(normal_world, 1.0);
 }

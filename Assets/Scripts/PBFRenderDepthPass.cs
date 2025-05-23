@@ -10,7 +10,6 @@ public class PBFRenderDpethPass : ScriptableRenderPass
     public Material particleMaterial; 
 
     // Render target configures
-    private RTHandle _spriteTexture;
     private RTHandle _depthTexture;
     
     public ComputeBuffer particleBuffer;
@@ -52,15 +51,21 @@ public class PBFRenderDpethPass : ScriptableRenderPass
         m_ProfilingSampler = new (m_ProfilerTag);
     }
 
+    // let feature set rt, do not need to manage rt by pass 
+    public void Setup(RTHandle depthTexture)
+    {
+        _depthTexture = depthTexture;
+    }
+    
     // initialize resources
     public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
     {
-        var descriptor = renderingData.cameraData.cameraTargetDescriptor;
-        descriptor.depthBufferBits = 0;
-        descriptor.graphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.R16_UNorm;
-        descriptor.sRGB = false;
-
-        RenderingUtils.ReAllocateIfNeeded(ref _depthTexture, descriptor, name: "_FluidDepthTexture");
+        // var descriptor = renderingData.cameraData.cameraTargetDescriptor;
+        // descriptor.depthBufferBits = 0;
+        // descriptor.graphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.R16_UNorm;
+        // descriptor.sRGB = false;
+        //
+        // RenderingUtils.ReAllocateIfNeeded(ref _depthTexture, descriptor, name: "_FluidDepthTexture");
 
         // Set material buffers
         particleMaterial.SetBuffer("_ParticlePositions", particleBuffer);
@@ -100,8 +105,6 @@ public class PBFRenderDpethPass : ScriptableRenderPass
     
     public override void OnCameraCleanup(CommandBuffer cmd)
     {
-        // _spriteTexture?.Release();
-        // _spriteTexture = null;
         // _depthTexture?.Release();
         // _depthTexture = null;
         // instanceBuffer?.Release();

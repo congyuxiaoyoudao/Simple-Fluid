@@ -85,10 +85,9 @@ Shader "PBF/FluidDepth"
                 // As billboard, the quad always faces camera
                 // TODO: Scaler should be a function relative to camera's aspect and fovy and screen's size,
                 viewPos.xyz += input.vertex.xyz * _Size;
-                float3 vertexWorldPos = mul(UNITY_MATRIX_I_V,viewPos);
 
                 output.positionVS = viewPos;
-                output.positionCS = mul(UNITY_MATRIX_VP, float4(vertexWorldPos,1));
+                output.positionCS = mul(UNITY_MATRIX_P, viewPos);
                 output.uv = input.uv;
                 return output;
             }
@@ -106,7 +105,7 @@ Shader "PBF/FluidDepth"
 
                 // Compute sphere normal
                 float3 sphereNormalVS = ComputeSphereNormal(quadUV);
-
+                
                 // base shading
                 // Light mainLight = GetMainLight();
                 // float3 lightDirVS = mul((float3x3)UNITY_MATRIX_V, mainLight.direction);
@@ -114,7 +113,7 @@ Shader "PBF/FluidDepth"
                 // output.color=float4(diffuse,1.0);
                 
                 // compute depth
-                float4 fragPosVS = float4(input.positionVS.xyz + sphereNormalVS * _Size,1.0);
+                float4 fragPosVS = float4(input.positionVS.xyz + sphereNormalVS * 0.5 * _Size,1.0);
                 float4 posCS = mul(UNITY_MATRIX_P,fragPosVS);
                 float depth = posCS.z/posCS.w;
                 
