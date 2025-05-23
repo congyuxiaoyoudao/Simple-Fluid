@@ -6,22 +6,22 @@ using UnityEngine;
 public class ParticleSystem : MonoBehaviour
 {
     [Header("Settings")]
-    public int particleCount = 1000;                        // Á£×ÓÊýÁ¿
-    public float areaSize = 5f;                             //Óò´óÐ¡
-    public Vector3 gravity = new Vector3(0, 9.8f, 0);       //ÖØÁ¦´óÐ¡/·½Ïò
-    public float particleMass = 1.0f;                       //Á£×ÓÖÊÁ¿
-    public float particleRadius = 1.0f;                     //Á£×Ó°ë¾¶
-    public float particleSize = 0.1f;                       //Á£×Ó´óÐ¡
-    public Color particleColor = Color.white;               //Àý×ÓÑÕÉ«
+    public int particleCount = 1000;                        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    public float areaSize = 5f;                             //ï¿½ï¿½ï¿½Ð¡
+    public Vector3 gravity = new Vector3(0, 9.8f, 0);       //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡/ï¿½ï¿½ï¿½ï¿½
+    public float particleMass = 1.0f;                       //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    public float particleRadius = 1.0f;                     //ï¿½ï¿½ï¿½Ó°ë¾¶
+    public float particleSize = 0.1f;                       //ï¿½ï¿½ï¿½Ó´ï¿½Ð¡
+    public Color particleColor = Color.white;               //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É«
 
-    public float targetDensity = 1;                         //Àý×ÓÑÕÉ«
-    public float pressureMultiplier = 1;                    //Àý×ÓÑÕÉ«
+    public float targetDensity = 1;                         //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É«
+    public float pressureMultiplier = 1;                    //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É«
     public float viscosityStrength = 0;
 
     [Header("References")]
-    public ComputeShader computeShader;                     // ÊäÈë¼ÆËã×ÅÉ«Æ÷
+    public ComputeShader computeShader;                     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É«ï¿½ï¿½
     public Material debugMaterial;
-    public Mesh particleMesh;                               // Ê¹ÓÃQuad»òSphere
+    public Mesh particleMesh;                               // Ê¹ï¿½ï¿½Quadï¿½ï¿½Sphere
 
     [Header("Visibility Hash Table")]
     public GameObject hashTestGO;
@@ -32,10 +32,10 @@ public class ParticleSystem : MonoBehaviour
     private ComputeBuffer _predictPosBuffer;
     private ComputeBuffer _hashTableBuffer;
     private GraphicsBuffer _instanceBuffer;
-    private Material _material;                             // äÖÈ¾Á£×ÓµÄ²ÄÖÊ
+    private Material _material;                             // ï¿½ï¿½È¾ï¿½ï¿½ï¿½ÓµÄ²ï¿½ï¿½ï¿½
 
     /// <summary>
-    /// Á£×ÓÊý¾Ý ÓÃÓÚÊý¾Ý´«Êä
+    /// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý´ï¿½ï¿½ï¿½
     /// </summary>
     struct Particle
     {
@@ -52,22 +52,22 @@ public class ParticleSystem : MonoBehaviour
 
     void InitializeBuffers()
     {
-        // ³õÊ¼»¯Á£×ÓÊý¾Ý
+        // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         Particle[] particles = new Particle[particleCount];
         float spacing = areaSize / Mathf.Ceil(Mathf.Sqrt(particleCount));
-        // ¼ÆËãÃ¿ÐÐÃ¿ÁÐµÄÁ£×ÓÊý
+        // ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½Ã¿ï¿½Ðµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         int particlesPerRow = Mathf.CeilToInt(Mathf.Sqrt(particleCount));
         for (int i = 0; i < particleCount; i++)
         {
-            // Öð¸öÅÅÐò£¨ÉÙÊýÁ£×Ó±ãÓÚDebugÄÄ¸öÁ£×ÓµÄÎÊÌâ£©
-            // TODO:Æ½ÃæÉú³É Á¢ÌåÉú³É Íø¸ñÉú³É
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó±ï¿½ï¿½ï¿½Debugï¿½Ä¸ï¿½ï¿½ï¿½ï¿½Óµï¿½ï¿½ï¿½ï¿½â£©
+            // TODO:Æ½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             //particles[i].position = new Vector3(
             //    -areaSize + spacing * i,
             //    Random.Range(0,areaSize),
             //    0
             //) + transform.position;
 
-            // y=0Æ½ÃæÉÏËæ»úÉú³É
+            // y=0Æ½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             //particles[i].position = new Vector3(
             //   Random.Range(-areaSize, areaSize),
             //   //Random.Range(0, areaSize),
@@ -75,24 +75,24 @@ public class ParticleSystem : MonoBehaviour
             //   Random.Range(-areaSize, areaSize)
             //) + transform.position;
 
-            // y=0 Æ½ÃæÉÏ¹æÂÉÉú³É
+            // y=0 Æ½ï¿½ï¿½ï¿½Ï¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             int x = i % particlesPerRow;
             int z = i / particlesPerRow;
 
             particles[i].position = new Vector3(
                 -areaSize + x * spacing,
-                0, // YÖá¹Ì¶¨Îª0
+                0, // Yï¿½ï¿½Ì¶ï¿½Îª0
                 -areaSize + z * spacing
             ) + transform.position;
 
-            // ³õÊ¼ËÙ¶ÈÎª0
+            // ï¿½ï¿½Ê¼ï¿½Ù¶ï¿½Îª0
             particles[i].velocity = Vector3.zero;
         }
 
-        // ´´½¨ComputeBuffer
+        // ï¿½ï¿½ï¿½ï¿½ComputeBuffer
         int stride = System.Runtime.InteropServices.Marshal.SizeOf(typeof(Particle));
         _particleBuffer = new ComputeBuffer(particleCount, stride);
-        _particleBuffer.SetData(particles);//SetDataÊ±»áÔö¼ÓCPUÓëGPUÖ®¼äµÄ´ø¿í
+        _particleBuffer.SetData(particles);//SetDataÊ±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½CPUï¿½ï¿½GPUÖ®ï¿½ï¿½Ä´ï¿½ï¿½ï¿½
 
 
         float[] density = new float[particleCount];
@@ -114,15 +114,15 @@ public class ParticleSystem : MonoBehaviour
 
     }
 
-    // ÐÂÔö£º³õÊ¼»¯¼ä½Ó²ÎÊý»º³å
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½Ó²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     void SetupIndirectArgs()
     {
         uint[] args = new uint[5] { 0, 0, 0, 0, 0 };
-        args[0] = particleMesh.GetIndexCount(0);    // Ë÷ÒýÊýÁ¿
-        args[1] = (uint)particleCount;             // ÊµÀýÊýÁ¿£¨³õÊ¼Îª×î´óÖµ£©
-        args[2] = particleMesh.GetIndexStart(0);    // ÆðÊ¼Ë÷Òý
-        args[3] = particleMesh.GetBaseVertex(0);    // »ù×¼¶¥µã
-        args[4] = 0;                                // ÆðÊ¼ÊµÀýID
+        args[0] = particleMesh.GetIndexCount(0);    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        args[1] = (uint)particleCount;             // Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼Îªï¿½ï¿½ï¿½Öµï¿½ï¿½
+        args[2] = particleMesh.GetIndexStart(0);    // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½
+        args[3] = particleMesh.GetBaseVertex(0);    // ï¿½ï¿½×¼ï¿½ï¿½ï¿½ï¿½
+        args[4] = 0;                                // ï¿½ï¿½Ê¼Êµï¿½ï¿½ID
 
         _instanceBuffer = new GraphicsBuffer(
             GraphicsBuffer.Target.IndirectArguments,
@@ -131,10 +131,14 @@ public class ParticleSystem : MonoBehaviour
         );
         _instanceBuffer.SetData(args);
     }
+    public ComputeBuffer GetParticleBuffer() => _particleBuffer;
+    public int GetParticleCount() => particleCount;
 
     void CreateMaterial()
     {
-        _material = new Material(Shader.Find("Particle/FluidParticle"));
+        // _material = new Material(Shader.Find("Particle/FluidParticle"));
+        _material = new Material(Shader.Find("PBF/FluidDepth"));
+        // _material = new Material(Shader.Find("PBF/FluidThickness"));
         _material.SetBuffer("_ParticlePositions", _particleBuffer);
         _material.SetColor("_Color", particleColor);
         _material.SetFloat("_Size", particleSize);
@@ -159,10 +163,10 @@ public class ParticleSystem : MonoBehaviour
         if (!IsValid()) return;
 
 
-        // ¸üÐÂCompute Shader²ÎÊý
-        computeShader.SetBuffer(0, "_Particles", _particleBuffer);//SetBuffer´ø¿íÏûºÄ¿ÉÒÔºöÂÔ²»¼Æ
-        computeShader.SetBuffer(0, "_Density", _densityBuffer);//SetBuffer´ø¿íÏûºÄ¿ÉÒÔºöÂÔ²»¼Æ
-        computeShader.SetBuffer(0, "_PredictPosition", _predictPosBuffer);//SetBuffer´ø¿íÏûºÄ¿ÉÒÔºöÂÔ²»¼Æ
+        // ï¿½ï¿½ï¿½ï¿½Compute Shaderï¿½ï¿½ï¿½ï¿½
+        computeShader.SetBuffer(0, "_Particles", _particleBuffer);//SetBufferï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½Ôºï¿½ï¿½Ô²ï¿½ï¿½ï¿½
+        computeShader.SetBuffer(0, "_Density", _densityBuffer);//SetBufferï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½Ôºï¿½ï¿½Ô²ï¿½ï¿½ï¿½
+        computeShader.SetBuffer(0, "_PredictPosition", _predictPosBuffer);//SetBufferï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½Ôºï¿½ï¿½Ô²ï¿½ï¿½ï¿½
         computeShader.SetBuffer(0, "_HashTable", _hashTableBuffer);
         computeShader.SetFloat("_ParticleCount", particleCount);
         computeShader.SetFloat("_ParticleMass", particleMass);
@@ -176,18 +180,18 @@ public class ParticleSystem : MonoBehaviour
         computeShader.SetFloat("_TargetDensity", targetDensity);
         computeShader.SetFloat("_PressureMultiplier", pressureMultiplier);
 
-        // µ÷¶ÈCompute Shader
+        // ï¿½ï¿½ï¿½ï¿½Compute Shader
         int threadGroups = Mathf.CeilToInt(particleCount / 64f);
         Debug.Log("ThreadGroupsNum: " + threadGroups);
         computeShader.Dispatch(0, threadGroups, 1, 1);
 
-        computeShader.SetBuffer(1, "_Particles", _particleBuffer);//SetBuffer´ø¿íÏûºÄ¿ÉÒÔºöÂÔ²»¼Æ
-        computeShader.SetBuffer(1, "_Density", _densityBuffer);//SetBuffer´ø¿íÏûºÄ¿ÉÒÔºöÂÔ²»¼Æ
+        computeShader.SetBuffer(1, "_Particles", _particleBuffer);//SetBufferï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½Ôºï¿½ï¿½Ô²ï¿½ï¿½ï¿½
+        computeShader.SetBuffer(1, "_Density", _densityBuffer);//SetBufferï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½Ôºï¿½ï¿½Ô²ï¿½ï¿½ï¿½
         computeShader.SetBuffer(1, "_PredictPosition", _predictPosBuffer);
         computeShader.Dispatch(1, threadGroups, 1, 1);
 
-        computeShader.SetBuffer(2, "_Particles", _particleBuffer);//SetBuffer´ø¿íÏûºÄ¿ÉÒÔºöÂÔ²»¼Æ
-        //computeShader.SetBuffer(1, "_Density", _densityBuffer);//SetBuffer´ø¿íÏûºÄ¿ÉÒÔºöÂÔ²»¼Æ
+        computeShader.SetBuffer(2, "_Particles", _particleBuffer);//SetBufferï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½Ôºï¿½ï¿½Ô²ï¿½ï¿½ï¿½
+        //computeShader.SetBuffer(1, "_Density", _densityBuffer);//SetBufferï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½Ôºï¿½ï¿½Ô²ï¿½ï¿½ï¿½
         computeShader.Dispatch(2, threadGroups, 1, 1);
 
         // HashKeyDebug
@@ -195,7 +199,7 @@ public class ParticleSystem : MonoBehaviour
         _hashTableBuffer.GetData(hashKey);
         //Debug.Log("HashKey: " + hashKey[0]+ hashKey[1]+ hashKey[2]);
 
-        // ³ÌÐò»¯»æÖÆÐ¡Çò
+        // ï¿½ï¿½ï¿½ò»¯»ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½
         //Graphics.DrawMeshInstancedProcedural(
         //    particleMesh,
         //    0,
@@ -227,7 +231,7 @@ public class ParticleSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// ÏÔÊ¾ÄÚ´æ¹ÜÀí
+    /// ï¿½ï¿½Ê¾ï¿½Ú´ï¿½ï¿½ï¿½ï¿½
     /// </summary>
     void OnDestroy()
     {
@@ -240,7 +244,7 @@ public class ParticleSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// ÏÔÊ¾ÎÒÃÇµÄÓò´óÐ¡
+    /// ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½Çµï¿½ï¿½ï¿½ï¿½Ð¡
     /// </summary>
     void OnDrawGizmos()
     {
@@ -249,7 +253,7 @@ public class ParticleSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// ÏÔÊ¾ÊÇ·ñ¿ÉÖ´ÐÐ
+    /// ï¿½ï¿½Ê¾ï¿½Ç·ï¿½ï¿½Ö´ï¿½ï¿½
     /// </summary>
     /// <returns></returns>
     bool IsValid()
