@@ -16,6 +16,9 @@ public class PBFRenderDpethPass : ScriptableRenderPass
     public GraphicsBuffer instanceBuffer;
     public int particleCount;
 
+    // material parameters
+    private float _particleSize = 1.0f;
+    
     public void SetupIndirectArgs()
     {
         if (instanceBuffer != null)
@@ -52,9 +55,10 @@ public class PBFRenderDpethPass : ScriptableRenderPass
     }
 
     // let feature set rt, do not need to manage rt by pass 
-    public void Setup(RTHandle depthTexture)
+    public void Setup(RTHandle depthTexture, float particleSize)
     {
         _depthTexture = depthTexture;
+        _particleSize = particleSize;
     }
     
     // initialize resources
@@ -69,9 +73,8 @@ public class PBFRenderDpethPass : ScriptableRenderPass
 
         // Set material buffers
         particleMaterial.SetBuffer("_ParticlePositions", particleBuffer);
-        particleMaterial.SetColor("_Color", Color.cyan);
-        particleMaterial.SetFloat("_Size", 0.2f);
-        SetupIndirectArgs();
+        particleMaterial.SetFloat("_Size", _particleSize);
+        // SetupIndirectArgs();
         
         ConfigureTarget(_depthTexture);
         ConfigureClear(ClearFlag.All, Color.clear); 

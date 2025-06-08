@@ -14,12 +14,12 @@ Shader "PBF/FluidDepth"
         {
             Name "PBF_Depth_Pass"
 
-            ZWrite On
-            ZTest LEqual
+            Cull Off
 
             HLSLPROGRAM
             #pragma vertex VS
             #pragma fragment FS
+            #pragma target 4.5
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -35,7 +35,6 @@ Shader "PBF/FluidDepth"
 
             // These constant buffer are set in cs
             CBUFFER_START(UnityPerMaterial)
-                float4 _Color;
                 float _Size;
             CBUFFER_END
 
@@ -51,6 +50,7 @@ Shader "PBF/FluidDepth"
                 float4 positionCS : SV_POSITION;
                 float2 uv    : TEXCOORD0;
                 float4 positionVS : TEXCOORD1;
+                float4 positionWS : TEXCOORD2; // World position for depth calculation
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -89,10 +89,17 @@ Shader "PBF/FluidDepth"
                 output.positionVS = viewPos;
                 output.positionCS = mul(UNITY_MATRIX_P, viewPos);
                 output.uv = input.uv;
+                output.positionWS = float4(particleWorldPos, 1.0); // Store world position for depth calculation
                 return output;
             }
-
-            float FS (Varyings input) : SV_Target
+            
+			float LinearDepthToUnityDepth(float linearDepth)
+			{
+				float depth01 = (linearDepth - _ProjectionParams.y) / (_ProjectionParams.z - _ProjectionParams.y);
+				return (1 - (depth01 * _ZBufferParams.y)) / (depth01 * _ZBufferParams.x);
+			}
+            
+            float FS (Varyings input, out float Depth: SV_Depth) : SV_Target
             {
                 // FSOutput output;
                 
@@ -113,17 +120,16 @@ Shader "PBF/FluidDepth"
                 // output.color=float4(diffuse,1.0);
                 
                 // compute depth
-                float4 fragPosVS = float4(input.positionVS.xyz + sphereNormalVS * 0.5 * _Size,1.0);
-                float4 posCS = mul(UNITY_MATRIX_P,fragPosVS);
-                float depth = posCS.z/posCS.w;
+                float4 fragPosVS = float4(input.positionVS.xyz + sphereNormalVS * 0.5, 1.0);
+                float linearDepth = -(fragPosVS.z);
                 
-                #if defined(UNITY_REVERSED_Z)
-                    depth = 1.0f - depth; //d3d, metal to do it
-                #endif
-                return depth;
-                // output.depth = float4(depth.xxx,1.0);
-                // return float4(quadUV, 0, 1);
-                // return output;
+                float4 posCS = mul(UNITY_MATRIX_P,fragPosVS);
+                float depth = posCS.z/ posCS.w; // Perspective divide to get depth in clip space
+				Depth = depth;
+                // #if defined(UNITY_REVERSED_Z)
+                //     Depth = 1.0f - Depth; //d3d, metal to do it
+                // #endif
+                return linearDepth;
             }
             ENDHLSL
         }

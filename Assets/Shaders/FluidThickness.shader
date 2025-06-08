@@ -14,6 +14,7 @@ Shader "PBF/FluidThickness"
         {
             Name "PBF_Thickness_Pass"
 
+            ZWrite Off
             Blend One One
 
             HLSLPROGRAM
@@ -34,8 +35,8 @@ Shader "PBF/FluidThickness"
 
             // These constant buffer are set in cs
             CBUFFER_START(UnityPerMaterial)
-                float4 _Color;
                 float _Size;
+                float _ThicknessScalar;
             CBUFFER_END
 
             struct Attributes
@@ -101,7 +102,7 @@ Shader "PBF/FluidThickness"
                 float3 sphereNormalVS = ComputeSphereNormal(quadUV);
                 
                 // TODO: add a scalar to scale thickness
-                float thickness = 0.1 * sphereNormalVS.z;
+                float thickness = 0.5 * sphereNormalVS.z * _ThicknessScalar;
                 
                 return float4(thickness.xxx,1.0);
             }

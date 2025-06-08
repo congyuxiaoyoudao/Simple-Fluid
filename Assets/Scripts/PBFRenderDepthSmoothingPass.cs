@@ -16,6 +16,10 @@ public class PBFDepthSmoothingPass : ScriptableRenderPass
     private RTHandle _intermediateDepthTexture;
     private RTHandle _smoothedDepthTexture;
 
+    // material parameters
+    private float _sigmaD = 1.0f;
+    private float _sigmaR = 1.0f;
+    
     // Ctor.
     public PBFDepthSmoothingPass(string profilerTag)
     {
@@ -23,11 +27,13 @@ public class PBFDepthSmoothingPass : ScriptableRenderPass
         m_ProfilingSampler = new(m_ProfilerTag);
     }
 
-    public void Setup(RTHandle depthTexture, RTHandle intermediateDepthTexture, RTHandle smoothedDepthTexture)
+    public void Setup(RTHandle depthTexture, RTHandle intermediateDepthTexture, RTHandle smoothedDepthTexture, float sigmaD, float sigmaR)
     {
         _depthTexture = depthTexture;
         _intermediateDepthTexture = intermediateDepthTexture;
         _smoothedDepthTexture = smoothedDepthTexture;
+        _sigmaD = sigmaD;
+        _sigmaR = sigmaR;
     }
     
     // Called before the pass executes for a camera
@@ -61,6 +67,9 @@ public class PBFDepthSmoothingPass : ScriptableRenderPass
         int width = cameraData.cameraTargetDescriptor.width;
         int height = cameraData.cameraTargetDescriptor.height;
         cmd.SetComputeVectorParam(depthSmoothingComputeShader, ShaderPropertyId.ScreenParams, new Vector2(width, height));
+        
+        cmd.SetComputeFloatParam(depthSmoothingComputeShader, ShaderPropertyId.INV_2SIGMA_D_SQ, 1.0f / (2.0f * _sigmaD * _sigmaR));
+        cmd.SetComputeFloatParam(depthSmoothingComputeShader, ShaderPropertyId.INV_2SIGMA_R_SQ, 1.0f / (2.0f * _sigmaR * _sigmaR));
         
         // Get thread group sizes from the kernel
         uint xGroupSize, yGroupSize, zGroupSize;

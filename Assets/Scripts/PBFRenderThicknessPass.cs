@@ -15,7 +15,11 @@ public class PBFRenderThicknessPass : ScriptableRenderPass
     public ComputeBuffer particleBuffer;
     public GraphicsBuffer instanceBuffer;
     public int particleCount;
-
+    
+    // material parameters
+    private float _particleSize = 1.0f;
+    private float _thicknessScalar = 1.0f;
+    
     public void SetupIndirectArgs()
     {
         if (instanceBuffer != null)
@@ -52,9 +56,11 @@ public class PBFRenderThicknessPass : ScriptableRenderPass
     }
 
     // let feature set rt, do not need to manage rt by pass 
-    public void Setup(RTHandle thicknessTexture)
+    public void Setup(RTHandle thicknessTexture, float particleSize, float thicknessScalar)
     {
         _thicknessTexture = thicknessTexture;
+        _particleSize = particleSize;
+        _thicknessScalar = thicknessScalar;
     }
     
     // initialize resources
@@ -63,9 +69,9 @@ public class PBFRenderThicknessPass : ScriptableRenderPass
 
         // Set material buffers
         particleMaterial.SetBuffer("_ParticlePositions", particleBuffer);
-        particleMaterial.SetColor("_Color", Color.cyan);
-        particleMaterial.SetFloat("_Size", 0.2f);
-        SetupIndirectArgs();
+        particleMaterial.SetFloat("_Size", _particleSize);
+        particleMaterial.SetFloat("_ThicknessScalar", _thicknessScalar);
+        // SetupIndirectArgs();
         
         ConfigureTarget(_thicknessTexture);
         ConfigureClear(ClearFlag.All, Color.clear); 

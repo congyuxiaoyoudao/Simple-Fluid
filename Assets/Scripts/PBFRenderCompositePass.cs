@@ -1,3 +1,4 @@
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
@@ -18,6 +19,13 @@ public class PBFRenderCompositePass : ScriptableRenderPass
     public GraphicsBuffer instanceBuffer;
     public int particleCount;
 
+    // material parameters
+    private float _particleSize = 1.0f;
+    private float _indexOfRefraction;
+    private Color _absorptionColor;
+    private Color _scatterColor;
+    private DebugPassType _debugPassType;
+    
     public void SetupIndirectArgs()
     {
         if (instanceBuffer != null)
@@ -54,11 +62,23 @@ public class PBFRenderCompositePass : ScriptableRenderPass
     }
 
     // let feature set rt, do not need to manage rt by pass 
-    public void Setup(RTHandle normalTexture, RTHandle thicknessTexture, RTHandle sceneTexture)
+    public void Setup(RTHandle normalTexture, 
+                      RTHandle thicknessTexture,
+                      RTHandle sceneTexture, 
+                      float particleSize, 
+                      float indexOfRefraction, 
+                      Color absorptionColor,
+                      Color scatterColor,
+                      DebugPassType debugPassType)
     {
         _normalTexture = normalTexture;
         _thicknessTexture = thicknessTexture;
         _sceneTexture = sceneTexture;
+        _particleSize = particleSize;
+        _indexOfRefraction = indexOfRefraction;
+        _absorptionColor = absorptionColor;
+        _scatterColor = scatterColor;
+        _debugPassType = debugPassType;
     }
     
     // initialize resources
@@ -73,13 +93,17 @@ public class PBFRenderCompositePass : ScriptableRenderPass
 
         // Set material buffers
         particleMaterial.SetBuffer("_ParticlePositions", particleBuffer);
-        particleMaterial.SetColor("_Color", Color.cyan);
-        particleMaterial.SetFloat("_Size", 0.2f);
-        SetupIndirectArgs();
+        particleMaterial.SetColor("_AbsorptionColor", _absorptionColor);
+        particleMaterial.SetColor("_ScatterColor", _scatterColor);
+        particleMaterial.SetFloat("_Size", _particleSize);
+        particleMaterial.SetFloat("_IOR", _indexOfRefraction);
+        particleMaterial.SetInt("_DebugType", (int)_debugPassType);
+        // SetupIndirectArgs();
         
         // direct to screen
         ConfigureTarget(renderingData.cameraData.renderer.cameraColorTargetHandle);
-        ConfigureClear(ClearFlag.All, Color.clear); 
+        // DO NOT clear the screen, or previous render pass(skybox) will be cleared
+        ConfigureClear(ClearFlag.None, Color.clear); 
     }
 
 
@@ -91,6 +115,18 @@ public class PBFRenderCompositePass : ScriptableRenderPass
         CommandBuffer cmd = CommandBufferPool.Get(m_ProfilerTag);
         using (new ProfilingScope(cmd, m_ProfilingSampler))
         {
+            Cubemap skyboxCubemap = null;
+            var skyboxMat = RenderSettings.skybox;
+            if (skyboxMat && skyboxMat.HasProperty("_Tex"))
+            {
+                skyboxCubemap = skyboxMat.GetTexture("_Tex") as Cubemap;
+            }
+
+            if (skyboxCubemap)
+            {
+                cmd.SetGlobalTexture(ShaderPropertyId.SkyboxColor, skyboxCubemap);
+            }
+
             cmd.DrawMeshInstancedIndirect(
                 particleMesh,
                 0,

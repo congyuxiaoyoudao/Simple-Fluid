@@ -20,11 +20,11 @@ float3 ReconstructViewSpacePosition(uint2 screenCoord, float depth)
 {
     // screenCoord 0...width-1, 0...height-1
     // Convert pixel coordinates to UV [0, 1]
-    float2 screenUV = (screenCoord.xy + 0.5f) * _ScreenParams.zw; // Add 0.5 for pixel center
+    float2 screenUV = screenCoord.xy * _ScreenParams.zw;
 
     // Convert UV to normalized device coordinates (NDC) [-1, 1]
     float2 ndcXY = screenUV * 2.0 - 1.0;
-    float3 ndcPos = float3(ndcXY, depth * 2.0 - 1.0);
+    float3 ndcPos = float3(ndcXY, depth*2.0-1.0);
     
     // Unproject NDC and depth using the inverse projection matrix
     // The W component after multiplication by _InverseProjection gives the view-space Z
@@ -79,7 +79,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     // For a right-handed view space (common in Unity), cross(bitangent, tangent) gives the correct normal direction.
     // Or normalize(cross(normalize(pos_x_plus - pos_center), normalize(pos_y_plus - pos_center))) for a potentially more robust but slower approach.
     // Using neighbor differences is standard for calculating derivatives.
-    if(abs(pos_x_plus.z - pos_center.z) < abs(pos_x_minus.z - pos_center.z))
+    if(abs(pos_x_plus.z - pos_center.z) < abs(pos_center.z - pos_x_minus.z))
     {
         tangent = pos_x_plus - pos_center;
     }
@@ -87,7 +87,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
     {
         tangent = pos_center - pos_x_minus; 
     }
-    if(abs(pos_y_plus.z - pos_center.z) < abs(pos_y_minus.z - pos_center.z))
+    if(abs(pos_y_plus.z - pos_center.z) < abs(pos_center.z - pos_y_minus.z))
     {
         bitangent = pos_y_plus - pos_center;
     }

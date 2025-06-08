@@ -209,13 +209,13 @@ public class ParticleSystem : MonoBehaviour
         //);
 
 
-        Graphics.DrawMeshInstancedIndirect(
-            particleMesh,
-            0,
-            _material,
-            new Bounds(transform.position, Vector3.one * areaSize * 2),
-            _instanceBuffer
-        );
+        // Graphics.DrawMeshInstancedIndirect(
+        //     particleMesh,
+        //     0,
+        //     _material,
+        //     new Bounds(transform.position, Vector3.one * areaSize * 2),
+        //     _instanceBuffer
+        // );
 
         if (debugMaterial != null)
         {
