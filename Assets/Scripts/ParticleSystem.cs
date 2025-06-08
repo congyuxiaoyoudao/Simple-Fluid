@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using Unity.Mathematics;
 using UnityEngine;
 
 public class ParticleSystem : MonoBehaviour
@@ -348,6 +347,7 @@ public class ParticleSystem : MonoBehaviour
         ///////////////////////////////////////////////////
 
         computeShader.SetFloat(particleCountID, particleCount);
+        computeShader.SetFloat("_ParticleSize", particleSize);
         computeShader.SetFloat(particleMassID, particleMass);
         computeShader.SetFloat(particleRadiusID, particleRadius);
         computeShader.SetFloat(deltaTimeID, Time.deltaTime);
@@ -360,103 +360,103 @@ public class ParticleSystem : MonoBehaviour
         computeShader.SetFloat(pressureMultiplierID, pressureMultiplier);
 
 
-        // 根据Particle的Position值初始化HashTable的值
-        computeShader.SetBuffer(calculateHashTableKernelID, particlesID, _particleBuffer);//SetBuffer带宽消耗可以忽略不计
-        computeShader.SetBuffer(calculateHashTableKernelID, hashTableID, _hashTableBuffer);
-        computeShader.Dispatch(calculateHashTableKernelID, threadGroups, 1, 1);
+        //// 根据Particle的Position值初始化HashTable的值
+        //computeShader.SetBuffer(calculateHashTableKernelID, particlesID, _particleBuffer);//SetBuffer带宽消耗可以忽略不计
+        //computeShader.SetBuffer(calculateHashTableKernelID, hashTableID, _hashTableBuffer);
+        //computeShader.Dispatch(calculateHashTableKernelID, threadGroups, 1, 1);
 
 
 
-        for (int i = 1; i <= 3; i++)
-        {
-            // 初始化BlockData的值为 0
-            computeShader.SetBuffer(initBlockDataKernelID, blockDataID, _blockDataBuffer);
-            computeShader.Dispatch(initBlockDataKernelID, threadGroup2, 1, 1);
+        //for (int i = 1; i <= 3; i++)
+        //{
+        //    // 初始化BlockData的值为 0
+        //    computeShader.SetBuffer(initBlockDataKernelID, blockDataID, _blockDataBuffer);
+        //    computeShader.Dispatch(initBlockDataKernelID, threadGroup2, 1, 1);
 
-            // 计算LocalPrefixSum
-            computeShader.SetInt("_Digit", i - 1);
-            computeShader.SetBuffer(calculateLocalPrefixSumKernelID, hashTableID, _hashTableBuffer);
-            computeShader.SetBuffer(calculateLocalPrefixSumKernelID, blockDataID, _blockDataBuffer);
-            computeShader.SetBuffer(calculateLocalPrefixSumKernelID, localPrefixSumDataID, _localPrefixSumBuffer);
-            computeShader.SetBuffer(calculateLocalPrefixSumKernelID, temp2DataID, _temp2Buffer);
-            computeShader.Dispatch(calculateLocalPrefixSumKernelID, threadGroups, 1, 1);
+        //    // 计算LocalPrefixSum
+        //    computeShader.SetInt("_Digit", i - 1);
+        //    computeShader.SetBuffer(calculateLocalPrefixSumKernelID, hashTableID, _hashTableBuffer);
+        //    computeShader.SetBuffer(calculateLocalPrefixSumKernelID, blockDataID, _blockDataBuffer);
+        //    computeShader.SetBuffer(calculateLocalPrefixSumKernelID, localPrefixSumDataID, _localPrefixSumBuffer);
+        //    computeShader.SetBuffer(calculateLocalPrefixSumKernelID, temp2DataID, _temp2Buffer);
+        //    computeShader.Dispatch(calculateLocalPrefixSumKernelID, threadGroups, 1, 1);
 
-            // 获取BlockData数据 便于Debug
-            //temp2Data = new int[threadGroup2];
-            //_blockDataBuffer.GetData(temp2Data);
+        //    // 获取BlockData数据 便于Debug
+        //    //temp2Data = new int[threadGroup2];
+        //    //_blockDataBuffer.GetData(temp2Data);
 
-            // 计算GlobalPrefixSum
-            computeShader.SetBuffer(calculateGlobalPrefixSumKernelID, blockDataID, _blockDataBuffer);
-            computeShader.SetBuffer(calculateGlobalPrefixSumKernelID, blockPrefixSumDataID, _blockPrefixSumBuffer);
-            computeShader.SetBuffer(calculateGlobalPrefixSumKernelID, blockPrefixSumOutputID, _blockPrefixSumOutputBuffer);
-            computeShader.Dispatch(calculateGlobalPrefixSumKernelID, threadGroup2, 1, 1);
+        //    // 计算GlobalPrefixSum
+        //    computeShader.SetBuffer(calculateGlobalPrefixSumKernelID, blockDataID, _blockDataBuffer);
+        //    computeShader.SetBuffer(calculateGlobalPrefixSumKernelID, blockPrefixSumDataID, _blockPrefixSumBuffer);
+        //    computeShader.SetBuffer(calculateGlobalPrefixSumKernelID, blockPrefixSumOutputID, _blockPrefixSumOutputBuffer);
+        //    computeShader.Dispatch(calculateGlobalPrefixSumKernelID, threadGroup2, 1, 1);
 
-            computeShader.SetBuffer(calculateGlobalPrefixSum2KernelID, blockDataID, _blockDataBuffer);
-            computeShader.SetBuffer(calculateGlobalPrefixSum2KernelID, blockPrefixSumDataID, _blockPrefixSumBuffer);
-            computeShader.SetBuffer(calculateGlobalPrefixSum2KernelID, blockPrefixSumOutputID, _blockPrefixSumOutputBuffer);
-            computeShader.Dispatch(calculateGlobalPrefixSum2KernelID, threadGroup2, 1, 1);
+        //    computeShader.SetBuffer(calculateGlobalPrefixSum2KernelID, blockDataID, _blockDataBuffer);
+        //    computeShader.SetBuffer(calculateGlobalPrefixSum2KernelID, blockPrefixSumDataID, _blockPrefixSumBuffer);
+        //    computeShader.SetBuffer(calculateGlobalPrefixSum2KernelID, blockPrefixSumOutputID, _blockPrefixSumOutputBuffer);
+        //    computeShader.Dispatch(calculateGlobalPrefixSum2KernelID, threadGroup2, 1, 1);
 
-            // 获取待排序的Hash数据 用于Debug
-            //hashKey = new int[particleCount];
-            //hash4bitsKey = new int[particleCount];
-            //_hashTableBuffer.GetData(hashKey);
-            //for (int j = 0; j < particleCount; j++)
-            //{
-            //    hash4bitsKey[j] = get4Bits(hashKey[j], i - 1);
-            //}
-            //Debug.Log("Sort hash" + i + ":   " + string.Join(", ", hashKey));
-            //Debug.Log("Sort 4bits hash" + i + ":   " + string.Join(", ", hash4bitsKey));
+        //    // 获取待排序的Hash数据 用于Debug
+        //    //hashKey = new int[particleCount];
+        //    //hash4bitsKey = new int[particleCount];
+        //    //_hashTableBuffer.GetData(hashKey);
+        //    //for (int j = 0; j < particleCount; j++)
+        //    //{
+        //    //    hash4bitsKey[j] = get4Bits(hashKey[j], i - 1);
+        //    //}
+        //    //Debug.Log("Sort hash" + i + ":   " + string.Join(", ", hashKey));
+        //    //Debug.Log("Sort 4bits hash" + i + ":   " + string.Join(", ", hash4bitsKey));
 
-            // 计算GlobalPosition
-            computeShader.SetBuffer(executeRadixSortKernelID, hashTableID, _hashTableBuffer);
-            computeShader.SetBuffer(executeRadixSortKernelID, blockDataID, _blockDataBuffer);
-            computeShader.SetBuffer(executeRadixSortKernelID, localPrefixSumDataID, _localPrefixSumBuffer);
-            //computeShader.SetBuffer(executeRadixSortKernelID, particlesID, _particleBuffer);
-            computeShader.SetBuffer(executeRadixSortKernelID, particleIndexID, _particleIndexBuffer);
-            computeShader.SetBuffer(executeRadixSortKernelID, "_HashTableTemp", _hashTableTempBuffer);
-            computeShader.SetBuffer(executeRadixSortKernelID, "_ParticleIndexTemp", _particleIndexTempBuffer);
-            computeShader.SetBuffer(executeRadixSortKernelID, "_GlobalPosition", _globalPositionBuffer);
-            computeShader.SetBuffer(executeRadixSortKernelID, blockPrefixSumDataID, _blockPrefixSumOutputBuffer);
-            computeShader.SetBuffer(executeRadixSortKernelID, tempDataID, _tempBuffer);
-            computeShader.SetBuffer(executeRadixSortKernelID, temp1DataID, _temp1Buffer);
-            //computeShader.SetBuffer(executeRadixSortKernelID, temp2DataID, _temp2Buffer);
-            computeShader.Dispatch(executeRadixSortKernelID, threadGroups, 1, 1);
+        //    // 计算GlobalPosition
+        //    computeShader.SetBuffer(executeRadixSortKernelID, hashTableID, _hashTableBuffer);
+        //    computeShader.SetBuffer(executeRadixSortKernelID, blockDataID, _blockDataBuffer);
+        //    computeShader.SetBuffer(executeRadixSortKernelID, localPrefixSumDataID, _localPrefixSumBuffer);
+        //    //computeShader.SetBuffer(executeRadixSortKernelID, particlesID, _particleBuffer);
+        //    computeShader.SetBuffer(executeRadixSortKernelID, particleIndexID, _particleIndexBuffer);
+        //    computeShader.SetBuffer(executeRadixSortKernelID, "_HashTableTemp", _hashTableTempBuffer);
+        //    computeShader.SetBuffer(executeRadixSortKernelID, "_ParticleIndexTemp", _particleIndexTempBuffer);
+        //    computeShader.SetBuffer(executeRadixSortKernelID, "_GlobalPosition", _globalPositionBuffer);
+        //    computeShader.SetBuffer(executeRadixSortKernelID, blockPrefixSumDataID, _blockPrefixSumOutputBuffer);
+        //    computeShader.SetBuffer(executeRadixSortKernelID, tempDataID, _tempBuffer);
+        //    computeShader.SetBuffer(executeRadixSortKernelID, temp1DataID, _temp1Buffer);
+        //    //computeShader.SetBuffer(executeRadixSortKernelID, temp2DataID, _temp2Buffer);
+        //    computeShader.Dispatch(executeRadixSortKernelID, threadGroups, 1, 1);
 
-            // 调试GlobalPosition数据的准确性
-            //tempData = new int[particleCount];
-            //_tempBuffer.GetData(tempData);
-            //DebugSort(tempData, 8192, i);
+        //    // 调试GlobalPosition数据的准确性
+        //    //tempData = new int[particleCount];
+        //    //_tempBuffer.GetData(tempData);
+        //    //DebugSort(tempData, 8192, i);
 
-            // 根据GlobalPosition重映射
-            computeShader.SetBuffer(changeParticlesIndexKernelID, "_GlobalPosition", _globalPositionBuffer);
-            computeShader.SetBuffer(changeParticlesIndexKernelID, "_ParticleIndexTemp", _particleIndexTempBuffer);
+        //    // 根据GlobalPosition重映射
+        //    computeShader.SetBuffer(changeParticlesIndexKernelID, "_GlobalPosition", _globalPositionBuffer);
+        //    computeShader.SetBuffer(changeParticlesIndexKernelID, "_ParticleIndexTemp", _particleIndexTempBuffer);
 
-            computeShader.SetBuffer(changeParticlesIndexKernelID, "_HashTableTemp", _hashTableTempBuffer);
-            computeShader.SetBuffer(changeParticlesIndexKernelID, hashTableID, _hashTableBuffer);
-            computeShader.SetBuffer(changeParticlesIndexKernelID, particleIndexID, _particleIndexBuffer);
-            computeShader.Dispatch(changeParticlesIndexKernelID, threadGroups, 1, 1);
+        //    computeShader.SetBuffer(changeParticlesIndexKernelID, "_HashTableTemp", _hashTableTempBuffer);
+        //    computeShader.SetBuffer(changeParticlesIndexKernelID, hashTableID, _hashTableBuffer);
+        //    computeShader.SetBuffer(changeParticlesIndexKernelID, particleIndexID, _particleIndexBuffer);
+        //    computeShader.Dispatch(changeParticlesIndexKernelID, threadGroups, 1, 1);
 
-            // 调试排序后的Hash值
-            //hashKey = new int[particleCount];
-            //_hashTableBuffer.GetData(hashKey);
-            //for (int j = 0; j < particleCount; j++)
-            //{
-            //    hash4bitsKey[j] = get4Bits(hashKey[j], i - 1);
-            //}
-            //Debug.Log("Sorted hash" + i + ":   " + string.Join(", ", hashKey));
-            //Debug.Log("Sorted 4bits hash" + i + ":   " + string.Join(", ", hash4bitsKey));
-        }
+        //    // 调试排序后的Hash值
+        //    //hashKey = new int[particleCount];
+        //    //_hashTableBuffer.GetData(hashKey);
+        //    //for (int j = 0; j < particleCount; j++)
+        //    //{
+        //    //    hash4bitsKey[j] = get4Bits(hashKey[j], i - 1);
+        //    //}
+        //    //Debug.Log("Sorted hash" + i + ":   " + string.Join(", ", hashKey));
+        //    //Debug.Log("Sorted 4bits hash" + i + ":   " + string.Join(", ", hash4bitsKey));
+        //}
 
-        // 初始化Hash表索引
-        computeShader.SetBuffer(initStartAndEndIndexKernelID, cellStartID, _cellStartBuffer);
-        computeShader.SetBuffer(initStartAndEndIndexKernelID, cellEndID, _cellEndBuffer);
-        computeShader.Dispatch(initStartAndEndIndexKernelID, threadGroups, 1, 1);
+        //// 初始化Hash表索引
+        //computeShader.SetBuffer(initStartAndEndIndexKernelID, cellStartID, _cellStartBuffer);
+        //computeShader.SetBuffer(initStartAndEndIndexKernelID, cellEndID, _cellEndBuffer);
+        //computeShader.Dispatch(initStartAndEndIndexKernelID, threadGroups, 1, 1);
 
-        // 计算Hash表索引
-        computeShader.SetBuffer(calculateStartAndEndIndexKernelID, hashTableID, _hashTableBuffer);
-        computeShader.SetBuffer(calculateStartAndEndIndexKernelID, cellStartID, _cellStartBuffer);
-        computeShader.SetBuffer(calculateStartAndEndIndexKernelID, cellEndID, _cellEndBuffer);
-        computeShader.Dispatch(calculateStartAndEndIndexKernelID, threadGroups, 1, 1);
+        //// 计算Hash表索引
+        //computeShader.SetBuffer(calculateStartAndEndIndexKernelID, hashTableID, _hashTableBuffer);
+        //computeShader.SetBuffer(calculateStartAndEndIndexKernelID, cellStartID, _cellStartBuffer);
+        //computeShader.SetBuffer(calculateStartAndEndIndexKernelID, cellEndID, _cellEndBuffer);
+        //computeShader.Dispatch(calculateStartAndEndIndexKernelID, threadGroups, 1, 1);
 
 
         // Debug索引值
@@ -506,7 +506,7 @@ public class ParticleSystem : MonoBehaviour
         computeShader.Dispatch(calculateVelocityKernelID, threadGroups, 1, 1);
 
         // 计算位置
-        computeShader.SetBuffer(calculatePositionKernelID, "_Particles", _particleBuffer);//SetBuffer带宽消耗可以忽略不计
+        computeShader.SetBuffer(calculatePositionKernelID, particlesID, _particleBuffer);//SetBuffer带宽消耗可以忽略不计
         computeShader.Dispatch(calculatePositionKernelID, threadGroups, 1, 1);
 
         // 初始化粒子索引值

@@ -688,14 +688,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4c6cd91bda2f8c84cbc62208db8e1c1d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  particleCount: 16384
+  particleCount: 10000
   areaSize: 4
   gravity: {x: 0, y: 9.8, z: 0}
   particleMass: 1
-  particleRadius: 1
+  particleRadius: 0.3
   particleSize: 0.1
   particleColor: {r: 1, g: 1, b: 1, a: 1}
-  targetDensity: 1
+  targetDensity: 0.5
   pressureMultiplier: 10
   viscosityStrength: 0.1
   computeShader: {fileID: 7200000, guid: d2e4cf3e958aa654abdb9dcef4f638b1, type: 3}

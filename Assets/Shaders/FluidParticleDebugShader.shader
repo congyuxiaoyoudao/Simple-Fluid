@@ -155,14 +155,14 @@ Shader "Particle/FluidParticleDebugShader"
             float4 frag (v2f i) : SV_Target
             {
                 float3 worldPos = i.worldPos;
-                float density = CalculateDensitySharp2D(worldPos);
+                float density = CalculateDensity3D(worldPos);
                 float pressure = ConvertDensityToPressure(density);
 
                 float positiveRange = step(_Threshold,pressure);
                 float equalRange = step(-_Threshold,pressure) * step(pressure,_Threshold);
                 float negativeRange = step(pressure,-_Threshold);
                 float3 color = positiveRange * _Color + equalRange *_Color2+negativeRange*_Color3;
-                color = density;
+                color = density/1000;
                 return float4(color,1);
                 //return _Color;
             }
