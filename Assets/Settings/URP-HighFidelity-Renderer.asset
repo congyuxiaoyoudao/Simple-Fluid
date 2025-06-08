@@ -1,5 +1,42 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-8573588054521599247
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82d0149fab4ce784f92dc9c5f662fe9f, type: 3}
+  m_Name: PBFRenderFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  settings:
+    renderPassEvent: 300
+    renderCompositePassEvent: 400
+    particleMesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
+    particleSize: 0.6
+    particleMinDensity: 0.041
+    debugPassType: 4
+    particleDepthMaterial: {fileID: 2100000, guid: cc8df7d56e72d0345bcf05b390b239c6,
+      type: 2}
+    depthSmoothingComputeShader: {fileID: 7200000, guid: 8c720c2899a789842990602642561e3a,
+      type: 3}
+    kernelRadius: 5
+    sigmaD: 11.1
+    sigmaR: 13.6
+    normalComputeShader: {fileID: 7200000, guid: 8fd606348de444f4bb29caecc8d01226,
+      type: 3}
+    particleThicknessMaterial: {fileID: 2100000, guid: 4029be58276197e4fb186ace978823cf,
+      type: 2}
+    thicknessScalar: 0.032
+    particleCompositeMaterial: {fileID: 2100000, guid: 8d4c065d4dd9b5748bfea888c0bf057d,
+      type: 2}
+    indexOfRefraction: 1.33
+    absorptionColor: {r: 0.27672952, g: 0.12597914, b: 0.0391598, a: 1}
+    scatterColor: {r: 0.224279, g: 0.8805031, b: 0.76009506, a: 1}
 --- !u!114 &-1878332245247344467
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -53,7 +90,8 @@ MonoBehaviour:
     hdrDebugViewPS: {fileID: 4800000, guid: 573620ae32aec764abd4d728906d2587, type: 3}
   m_RendererFeatures:
   - {fileID: -1878332245247344467}
-  m_RendererFeatureMap: adc0de57c6d2eee5
+  - {fileID: -8573588054521599247}
+  m_RendererFeatureMap: adc0de57c6d2eee5f12ab5d7167f0489
   m_UseNativeRenderPass: 0
   postProcessData: {fileID: 11400000, guid: 41439944d30ece34e96484bdb6645b55, type: 2}
   xrSystemData: {fileID: 11400000, guid: 60e1133243b97e347b653163a8c01b64, type: 2}
@@ -96,3 +134,18 @@ MonoBehaviour:
   m_CopyDepthMode: 0
   m_AccurateGbufferNormals: 0
   m_IntermediateTextureMode: 1
+--- !u!114 &7875531767153667386
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 902157a8d18d23c4faa6f204e115b502, type: 3}
+  m_Name: MRTFeature
+  m_EditorClassIdentifier: 
+  m_Active: 1
+  settings: {mrtMaterial: {fileID: 2100000, guid: 5f7d27907f86e824ab5e7700f533da15,
+      type: 2}}

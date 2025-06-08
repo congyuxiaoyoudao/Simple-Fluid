@@ -18,9 +18,9 @@ public class ParticleSystem : MonoBehaviour
     public float viscosityStrength = 1;                     //Õ³¶ÈÏµÊý
 
     [Header("References")]
-    public ComputeShader computeShader;                     // ÊäÈë¼ÆËã×ÅÉ«Æ÷
+    public ComputeShader computeShader;                     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É«ï¿½ï¿½
     public Material debugMaterial;
-    public Mesh particleMesh;                               // Ê¹ÓÃQuad»òSphere
+    public Mesh particleMesh;                               // Ê¹ï¿½ï¿½Quadï¿½ï¿½Sphere
 
     [Header("Visibility Hash Table")]
     public GameObject hashTestGO;
@@ -47,7 +47,7 @@ public class ParticleSystem : MonoBehaviour
     private ComputeBuffer _temp2Buffer;
 
     private GraphicsBuffer _instanceBuffer;
-    private Material _material;                             // äÖÈ¾Á£×ÓµÄ²ÄÖÊ
+    private Material _material;                             // ï¿½ï¿½È¾ï¿½ï¿½ï¿½ÓµÄ²ï¿½ï¿½ï¿½
 
     private int[] hashKey;
     private int[] hash4bitsKey;
@@ -107,7 +107,7 @@ public class ParticleSystem : MonoBehaviour
 
 
     /// <summary>
-    /// Á£×ÓÊý¾Ý ÓÃÓÚÊý¾Ý´«Êä
+    /// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý´ï¿½ï¿½ï¿½
     /// </summary>
     struct Particle
     {
@@ -143,22 +143,22 @@ public class ParticleSystem : MonoBehaviour
 
     void InitializeBuffers()
     {
-        // ³õÊ¼»¯Á£×ÓÊý¾Ý
+        // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         Particle[] particles = new Particle[particleCount];
         float spacing = areaSize / Mathf.Ceil(Mathf.Sqrt(particleCount));
-        // ¼ÆËãÃ¿ÐÐÃ¿ÁÐµÄÁ£×ÓÊý
+        // ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½Ã¿ï¿½Ðµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         int particlesPerRow = Mathf.CeilToInt(Mathf.Sqrt(particleCount));
         for (int i = 0; i < particleCount; i++)
         {
-            // Öð¸öÅÅÐò£¨ÉÙÊýÁ£×Ó±ãÓÚDebugÄÄ¸öÁ£×ÓµÄÎÊÌâ£©
-            // TODO:Æ½ÃæÉú³É Á¢ÌåÉú³É Íø¸ñÉú³É
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó±ï¿½ï¿½ï¿½Debugï¿½Ä¸ï¿½ï¿½ï¿½ï¿½Óµï¿½ï¿½ï¿½ï¿½â£©
+            // TODO:Æ½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             //particles[i].position = new Vector3(
             //    -areaSize + spacing * i,
             //    Random.Range(0,areaSize),
             //    0
             //) + transform.position;
 
-            // y=0Æ½ÃæÉÏËæ»úÉú³É
+            // y=0Æ½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             //particles[i].position = new Vector3(
             //   Random.Range(-areaSize, areaSize),
             //   //Random.Range(0, areaSize),
@@ -166,17 +166,17 @@ public class ParticleSystem : MonoBehaviour
             //   Random.Range(-areaSize, areaSize)
             //) + transform.position;
 
-            // y=0 Æ½ÃæÉÏ¹æÂÉÉú³É
+            // y=0 Æ½ï¿½ï¿½ï¿½Ï¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             int x = i % particlesPerRow;
             int z = i / particlesPerRow;
 
             particles[i].position = new Vector3(
                 -areaSize + x * spacing,
-                0, // YÖá¹Ì¶¨Îª0
+                0, // Yï¿½ï¿½Ì¶ï¿½Îª0
                 -areaSize + z * spacing
             ) + transform.position;
 
-            // ³õÊ¼ËÙ¶ÈÎª0
+            // ï¿½ï¿½Ê¼ï¿½Ù¶ï¿½Îª0
             particles[i].velocity = Vector3.zero;
         }
 
@@ -234,15 +234,15 @@ public class ParticleSystem : MonoBehaviour
         _temp2Buffer = new ComputeBuffer(particleCount, intStride);
     }
 
-    // ÐÂÔö£º³õÊ¼»¯¼ä½Ó²ÎÊý»º³å
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½Ó²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     void SetupIndirectArgs()
     {
         uint[] args = new uint[5] { 0, 0, 0, 0, 0 };
-        args[0] = particleMesh.GetIndexCount(0);    // Ë÷ÒýÊýÁ¿
-        args[1] = (uint)particleCount;             // ÊµÀýÊýÁ¿£¨³õÊ¼Îª×î´óÖµ£©
-        args[2] = particleMesh.GetIndexStart(0);    // ÆðÊ¼Ë÷Òý
-        args[3] = particleMesh.GetBaseVertex(0);    // »ù×¼¶¥µã
-        args[4] = 0;                                // ÆðÊ¼ÊµÀýID
+        args[0] = particleMesh.GetIndexCount(0);    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        args[1] = (uint)particleCount;             // Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼Îªï¿½ï¿½ï¿½Öµï¿½ï¿½
+        args[2] = particleMesh.GetIndexStart(0);    // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½
+        args[3] = particleMesh.GetBaseVertex(0);    // ï¿½ï¿½×¼ï¿½ï¿½ï¿½ï¿½
+        args[4] = 0;                                // ï¿½ï¿½Ê¼Êµï¿½ï¿½ID
 
         _instanceBuffer = new GraphicsBuffer(
             GraphicsBuffer.Target.IndirectArguments,
@@ -251,10 +251,14 @@ public class ParticleSystem : MonoBehaviour
         );
         _instanceBuffer.SetData(args);
     }
+    public ComputeBuffer GetParticleBuffer() => _particleBuffer;
+    public int GetParticleCount() => particleCount;
 
     void CreateMaterial()
     {
-        _material = new Material(Shader.Find("Particle/FluidParticle"));
+        // _material = new Material(Shader.Find("Particle/FluidParticle"));
+        _material = new Material(Shader.Find("PBF/FluidDepth"));
+        // _material = new Material(Shader.Find("PBF/FluidThickness"));
         _material.SetBuffer("_ParticlePositions", _particleBuffer);
         _material.SetColor("_Color", particleColor);
         _material.SetFloat("_Size", particleSize);
@@ -293,7 +297,7 @@ public class ParticleSystem : MonoBehaviour
         //Debug.Log("IsValid: " + IsUniqueAndAllLessThan(tempData, 2048));
         //Debug.Log("PreSum: " + debugData[0] + " " + debugData[1] + " " + debugData[2] + " " + debugData[3] + " " + debugData[4] + " " + debugData[5] + " " + debugData[6] + " " + debugData[7]);
 
-        // ³ÌÐò»¯»æÖÆÐ¡Çò
+        // ï¿½ï¿½ï¿½ò»¯»ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½
         //Graphics.DrawMeshInstancedProcedural(
         //    particleMesh,
         //    0,
@@ -303,13 +307,13 @@ public class ParticleSystem : MonoBehaviour
         //);
 
 
-        Graphics.DrawMeshInstancedIndirect(
-            particleMesh,
-            0,
-            _material,
-            new Bounds(transform.position, Vector3.one * areaSize * 2),
-            _instanceBuffer
-        );
+        // Graphics.DrawMeshInstancedIndirect(
+        //     particleMesh,
+        //     0,
+        //     _material,
+        //     new Bounds(transform.position, Vector3.one * areaSize * 2),
+        //     _instanceBuffer
+        // );
 
         if (debugMaterial != null)
         {
@@ -517,7 +521,7 @@ public class ParticleSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// ÏÔÊ¾ÄÚ´æ¹ÜÀí
+    /// ï¿½ï¿½Ê¾ï¿½Ú´ï¿½ï¿½ï¿½ï¿½
     /// </summary>
     void OnDestroy()
     {
@@ -548,7 +552,7 @@ public class ParticleSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// ÏÔÊ¾ÎÒÃÇµÄÓò´óÐ¡
+    /// ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½Çµï¿½ï¿½ï¿½ï¿½Ð¡
     /// </summary>
     void OnDrawGizmos()
     {
@@ -557,7 +561,7 @@ public class ParticleSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// ÏÔÊ¾ÊÇ·ñ¿ÉÖ´ÐÐ
+    /// ï¿½ï¿½Ê¾ï¿½Ç·ï¿½ï¿½Ö´ï¿½ï¿½
     /// </summary>
     /// <returns></returns>
     bool IsValid()
