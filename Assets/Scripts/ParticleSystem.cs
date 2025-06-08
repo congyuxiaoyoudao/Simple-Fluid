@@ -18,7 +18,7 @@ public class ParticleSystem : MonoBehaviour
     public float viscosityStrength = 1;                     //Õ³¶ÈÏµÊý
 
     [Header("References")]
-    public ComputeShader computeShader;                     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É«ï¿½ï¿½
+    public ComputeShader computeShader;                     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É«ï¿½ï¿?
     public Material debugMaterial;
     public Mesh particleMesh;                               // Ê¹ï¿½ï¿½Quadï¿½ï¿½Sphere
 
@@ -145,40 +145,44 @@ public class ParticleSystem : MonoBehaviour
     {
         // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         Particle[] particles = new Particle[particleCount];
-        float spacing = areaSize / Mathf.Ceil(Mathf.Sqrt(particleCount));
-        // ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½Ã¿ï¿½Ðµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
-        int particlesPerRow = Mathf.CeilToInt(Mathf.Sqrt(particleCount));
-        for (int i = 0; i < particleCount; i++)
-        {
-            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó±ï¿½ï¿½ï¿½Debugï¿½Ä¸ï¿½ï¿½ï¿½ï¿½Óµï¿½ï¿½ï¿½ï¿½â£©
-            // TODO:Æ½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
-            //particles[i].position = new Vector3(
-            //    -areaSize + spacing * i,
-            //    Random.Range(0,areaSize),
-            //    0
-            //) + transform.position;
 
-            // y=0Æ½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
-            //particles[i].position = new Vector3(
-            //   Random.Range(-areaSize, areaSize),
-            //   //Random.Range(0, areaSize),
-            //   0,
-            //   Random.Range(-areaSize, areaSize)
-            //) + transform.position;
+        DistributeInVolumeRandom(particles , particleMesh , particleCount);  //Ëæ»ú·Ö²¼
+        //DistributeInVolume(particles, particleMesh, particleCount);            //°´ÌåËØ·Ö²¼
 
-            // y=0 Æ½ï¿½ï¿½ï¿½Ï¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
-            int x = i % particlesPerRow;
-            int z = i / particlesPerRow;
+        //float spacing = areaSize / Mathf.Ceil(Mathf.Sqrt(particleCount));
+        //// ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½Ã¿ï¿½Ðµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        //int particlesPerRow = Mathf.CeilToInt(Mathf.Sqrt(particleCount));
+        //for (int i = 0; i < particleCount; i++)
+        //{
+        //    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó±ï¿½ï¿½ï¿½Debugï¿½Ä¸ï¿½ï¿½ï¿½ï¿½Óµï¿½ï¿½ï¿½ï¿½â£©
+        //    // TODO:Æ½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        //    //particles[i].position = new Vector3(
+        //    //    -areaSize + spacing * i,
+        //    //    Random.Range(0,areaSize),
+        //    //    0
+        //    //) + transform.position;
 
-            particles[i].position = new Vector3(
-                -areaSize + x * spacing,
-                0, // Yï¿½ï¿½Ì¶ï¿½Îª0
-                -areaSize + z * spacing
-            ) + transform.position;
+        //    // y=0Æ½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿?
+        //    //particles[i].position = new Vector3(
+        //    //   Random.Range(-areaSize, areaSize),
+        //    //   //Random.Range(0, areaSize),
+        //    //   0,
+        //    //   Random.Range(-areaSize, areaSize)
+        //    //) + transform.position;
 
-            // ï¿½ï¿½Ê¼ï¿½Ù¶ï¿½Îª0
-            particles[i].velocity = Vector3.zero;
-        }
+        //    // y=0 Æ½ï¿½ï¿½ï¿½Ï¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        //    int x = i % particlesPerRow;
+        //    int z = i / particlesPerRow;
+
+        //    particles[i].position = new Vector3(
+        //        -areaSize + x * spacing,
+        //        0, // Yï¿½ï¿½Ì¶ï¿½Î?
+        //        -areaSize + z * spacing
+        //    ) + transform.position;
+
+        // ï¿½ï¿½Ê¼ï¿½Ù¶ï¿½Îª0
+        //    particles[i].velocity = Vector3.zero;
+        //}
 
         // ´´½¨ComputeBuffer
         _particleBuffer = new ComputeBuffer(particleCount, particleStructStride);
@@ -234,12 +238,12 @@ public class ParticleSystem : MonoBehaviour
         _temp2Buffer = new ComputeBuffer(particleCount, intStride);
     }
 
-    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½Ó²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½Ó²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿?
     void SetupIndirectArgs()
     {
         uint[] args = new uint[5] { 0, 0, 0, 0, 0 };
         args[0] = particleMesh.GetIndexCount(0);    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
-        args[1] = (uint)particleCount;             // Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼Îªï¿½ï¿½ï¿½Öµï¿½ï¿½
+        args[1] = (uint)particleCount;             // Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼Îªï¿½ï¿½ï¿½Öµï¿½ï¿?
         args[2] = particleMesh.GetIndexStart(0);    // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½
         args[3] = particleMesh.GetBaseVertex(0);    // ï¿½ï¿½×¼ï¿½ï¿½ï¿½ï¿½
         args[4] = 0;                                // ï¿½ï¿½Ê¼Êµï¿½ï¿½ID
@@ -488,7 +492,7 @@ public class ParticleSystem : MonoBehaviour
         computeShader.SetBuffer(calculateDensityKernelID, cellEndID, _cellEndBuffer);
         computeShader.SetBuffer(calculateDensityKernelID, temp1DataID, _temp1Buffer);
 
-        Debug.Log("ThreadGroupsNum: " + threadGroups);
+        //Debug.Log("ThreadGroupsNum: " + threadGroups);
         computeShader.SetFloat("_ThreadGroupCount", threadGroups);
         computeShader.Dispatch(calculateDensityKernelID, threadGroups, 1, 1);
 
@@ -521,7 +525,7 @@ public class ParticleSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// ï¿½ï¿½Ê¾ï¿½Ú´ï¿½ï¿½ï¿½ï¿½
+    /// ï¿½ï¿½Ê¾ï¿½Ú´ï¿½ï¿½ï¿½ï¿?
     /// </summary>
     void OnDestroy()
     {
@@ -552,7 +556,7 @@ public class ParticleSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½Çµï¿½ï¿½ï¿½ï¿½Ð¡
+    /// ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½Çµï¿½ï¿½ï¿½ï¿½Ð?
     /// </summary>
     void OnDrawGizmos()
     {
@@ -561,7 +565,7 @@ public class ParticleSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// ï¿½ï¿½Ê¾ï¿½Ç·ï¿½ï¿½Ö´ï¿½ï¿½
+    /// ï¿½ï¿½Ê¾ï¿½Ç·ï¿½ï¿½Ö´ï¿½ï¿?
     /// </summary>
     /// <returns></returns>
     bool IsValid()
@@ -640,6 +644,151 @@ public class ParticleSystem : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Ëæ»úÔÚmeshÍø¸ñÀïÉú³ÉÁ£×Ó
+    /// </summary>
 
+    void DistributeInVolumeRandom(Particle[] particles, Mesh mesh, int particleCount)
+    {
+        // 1. ÁÙÊ±´´½¨ MeshCollider
+        GameObject tempObj = new GameObject("TempCollider");
+        MeshCollider tempCollider = tempObj.AddComponent<MeshCollider>();
+        tempCollider.sharedMesh = mesh;
+        tempCollider.convex = false;
+
+        // 2. Ô¤¼ÆËãÓÐÐ§Î»ÖÃ
+        Bounds bounds = mesh.bounds;
+        List<Vector3> validPositions = new List<Vector3>();
+        int preSamples = particleCount; // Ô¤²ÉÑùÊýÁ¿£¬¿É¸ù¾ÝÐèÒªµ÷Õû
+
+        for (int i = 0; i < preSamples; i++)
+        {
+            Vector3 pos = new Vector3(
+                Random.Range(bounds.min.x, bounds.max.x),
+                Random.Range(bounds.min.y, bounds.max.y),
+                Random.Range(bounds.min.z, bounds.max.z)
+            );
+            if (IsPointInMesh(pos, tempCollider))
+                validPositions.Add(pos);
+        }
+
+        // 3. ·ÖÅäÁ£×Ó
+        for (int i = 0; i < Mathf.Min(particleCount, validPositions.Count); i++)
+        {
+            particles[i].position = validPositions[Random.Range(0, validPositions.Count)];
+        }
+
+        // 4. ÇåÀíÁÙÊ±¶ÔÏó
+        GameObject.Destroy(tempObj);
+    }
+
+    void DistributeInVolume(Particle[] particles, Mesh mesh, int particleCount)
+    {
+        // 1. ÁÙÊ±´´½¨ MeshCollider
+        GameObject tempObj = new GameObject("TempCollider");
+        MeshCollider tempCollider = tempObj.AddComponent<MeshCollider>();
+        tempCollider.sharedMesh = mesh;
+        tempCollider.convex = false; // ±ØÐëÉèÎª false£¡
+
+        // 2. ¼ì²é Mesh Êý¾ÝÊÇ·ñÓÐÐ§
+        if (mesh.vertexCount == 0)
+        {
+            Debug.LogError("Mesh has no vertices!");
+            GameObject.Destroy(tempObj);
+            return;
+        }
+
+        // 3. ÌåËØ»¯²ÎÊý
+        Bounds bounds = mesh.bounds;
+        Debug.Log($"Mesh bounds: {bounds}"); // È·ÈÏ°üÎ§ºÐÊÇ·ñºÏÀí
+        int gridResolution = 30;
+        Vector3 voxelSize = bounds.size / gridResolution;
+
+        // 4. ¼ì²âÓÐÐ§ÌåËØ
+        bool[,,] voxelGrid = new bool[gridResolution, gridResolution, gridResolution];
+        for (int x = 0; x < gridResolution; x++)
+        {
+            for (int y = 0; y < gridResolution; y++)
+            {
+                for (int z = 0; z < gridResolution; z++)
+                {
+                    Vector3 voxelCenter = bounds.min + new Vector3(
+                        (x + 0.5f) * voxelSize.x,
+                        (y + 0.5f) * voxelSize.y,
+                        (z + 0.5f) * voxelSize.z
+                    );
+                    voxelGrid[x, y, z] = IsPointInMesh(voxelCenter, tempCollider);
+                }
+            }
+        }
+
+        // 5. ÊÕ¼¯ÓÐÐ§Î»ÖÃ
+        List<Vector3> validPositions = new List<Vector3>();
+        for (int x = 0; x < gridResolution; x++)
+        {
+            for (int y = 0; y < gridResolution; y++)
+            {
+                for (int z = 0; z < gridResolution; z++)
+                {
+                    if (voxelGrid[x, y, z])
+                    {
+                        Vector3 randomPos = bounds.min + new Vector3(
+                            (x + Random.value) * voxelSize.x,
+                            (y + Random.value) * voxelSize.y,
+                            (z + Random.value) * voxelSize.z
+                        );
+                        validPositions.Add(randomPos);
+                    }
+                }
+            }
+        }
+
+        Debug.Log($"Valid positions: {validPositions.Count}");
+
+        // 6. ·ÖÅäÁ£×Ó£¨Èç¹û validPositions ÈÔÎª¿Õ£¬ÔòÊ¹ÓÃ°üÎ§ºÐËæ»ú·Ö²¼£©
+        if (validPositions.Count == 0)
+        {
+            Debug.LogWarning("No valid positions found! Falling back to bounding box.");
+            for (int i = 0; i < particleCount; i++)
+            {
+                particles[i].position = new Vector3(
+                    Random.Range(bounds.min.x, bounds.max.x),
+                    Random.Range(bounds.min.y, bounds.max.y),
+                    Random.Range(bounds.min.z, bounds.max.z)
+                );
+            }
+        }
+        else
+        {
+            for (int i = 0; i < Mathf.Min(particleCount, validPositions.Count); i++)
+            {
+                particles[i].position = validPositions[Random.Range(0, validPositions.Count)];
+            }
+        }
+
+        // 7. Ïú»ÙÁÙÊ±¶ÔÏó
+        GameObject.Destroy(tempObj);
+    }
+
+    bool IsPointInMesh(Vector3 point, MeshCollider collider)
+    {
+        // 1. ¿ìËÙÅÅ³ý£º¼ì²éÊÇ·ñÔÚ°üÎ§ºÐÄÚ
+        if (!collider.bounds.Contains(point))
+            return false;
+
+        // 2. ´Ó¸ß´¦ÏòÏÂ·¢ÉäÉäÏß
+        Vector3 rayStart = point + Vector3.up * 1000f;
+        Ray ray = new Ray(rayStart, Vector3.down);
+
+        // 3. ¼ì²âÉäÏßÊÇ·ñÓëÄ£ÐÍÏà½»
+        if (collider.Raycast(ray, out RaycastHit hit, Mathf.Infinity))
+        {
+            // 4. Í³¼Æ½»µãÊýÁ¿£¨ÆæÊý=ÄÚ²¿£¬Å¼Êý=Íâ²¿£©
+            RaycastHit[] hits = Physics.RaycastAll(ray, Mathf.Infinity);
+            int hitCount = Physics.RaycastAll(ray, Mathf.Infinity).Length;
+            return hitCount % 2 == 1;
+        }
+        return false;
+    }
 
 }
