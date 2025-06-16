@@ -208,8 +208,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.03891691, y: 0.8244743, z: -0.04732264, w: 0.5625729}
-  m_LocalPosition: {x: -10.25, y: -1.04, z: 4.36}
+  m_LocalRotation: {x: -0.08717233, y: 0.8995906, z: -0.21045253, w: -0.37262258}
+  m_LocalPosition: {x: 7.653881, y: 3.88632, z: 8.17603}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -471,11 +471,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4c6cd91bda2f8c84cbc62208db8e1c1d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  particleCount: 2000
-  areaSize: 4
+  particleCount: 16384
+  areaSize: 2
   gravity: {x: 0, y: 9.8, z: 0}
   particleMass: 1
-  particleRadius: 0.3
+  particleRadius: 0.15
   particleSize: 0.1
   particleColor: {r: 1, g: 1, b: 1, a: 1}
   targetDensity: 1

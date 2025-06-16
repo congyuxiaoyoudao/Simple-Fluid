@@ -12,12 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 82d0149fab4ce784f92dc9c5f662fe9f, type: 3}
   m_Name: PBFRenderFeature
   m_EditorClassIdentifier: 
-  m_Active: 1
+  m_Active: 0
   settings:
     renderPassEvent: 300
     renderCompositePassEvent: 400
     particleMesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
-    particleSize: 0.6
+    particleSize: 0.15
     particleMinDensity: 0.041
     debugPassType: 4
     particleDepthMaterial: {fileID: 2100000, guid: cc8df7d56e72d0345bcf05b390b239c6,
@@ -34,7 +34,7 @@ MonoBehaviour:
     thicknessScalar: 0.032
     particleCompositeMaterial: {fileID: 2100000, guid: 8d4c065d4dd9b5748bfea888c0bf057d,
       type: 2}
-    indexOfRefraction: 1.33
+    indexOfRefraction: 1.319
     absorptionColor: {r: 0.27672952, g: 0.12597914, b: 0.0391598, a: 1}
     scatterColor: {r: 0.224279, g: 0.8805031, b: 0.76009506, a: 1}
 --- !u!114 &-1878332245247344467

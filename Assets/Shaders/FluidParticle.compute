@@ -15,6 +15,7 @@
 
 //#include "UnityCG.cginc"
 #define THREAD_NUM_X 64
+#define THREAD_NUM2 512
 
 struct Particle
 {
@@ -139,7 +140,7 @@ float sdSphere(float3 p, float s)
 // Hash
 static int3 PositionToCellCoord(float3 position)
 {
-    return int3(floor((position - _AreaCenter + _AreaSize) / 1.01 * _ParticleRadius));
+    return int3(floor((position - _AreaCenter + 10 * _AreaSize) / (1.01 * _ParticleRadius)));
 }
 
 static int CellCoordToCellHash(int3 cellCoord)
@@ -151,9 +152,12 @@ static int CellCoordToCellHash(int3 cellCoord)
 }
 
 // TODO: Solve the hash collision
-static int CellHashToHashKey(int cellHash)
+static uint CellHashToHashKey(uint cellHash)
 {
-    return cellHash % 7999;
+    cellHash %= 16384;
+    if (cellHash < 0)
+        cellHash += 16384;
+    return cellHash;
 }
 
 
@@ -390,10 +394,10 @@ static float3 CalculatePressureForceWithAcceleration(int particleIndex,float par
             if (particleIndex == _ParticleIndex[j])
                 continue;
             
-            float3 offset = _Particles[_ParticleIndex[j]].position - predictionPosition;
+            float3 offset = _Particles[_ParticleIndex[j]].position - _Particles[particleIndex].position;
             float dst = length(offset);
         
-            float3 dir = dst == 0 ? float3(1, 0, 0) : offset / dst;
+            float3 dir = dst < 0.001f ? float3(0, 1, 0) : offset / dst;
             float slope = SharpingKernelDerivative(dst, _ParticleRadius);
             float density = _Density[j];
             float sharedPressure = CalculateSharedPressure(density, particleDensity);
@@ -458,7 +462,10 @@ static float3 CalculateViscosityForceWithAcceleration(int particleIndex)
 
         for (int j = cellStartIndex; j < cellEndIndex; j++)
         {
-            Particle otherParticle = _Particles[j];
+            int otherParticleIndex = _ParticleIndex[j];
+            if (otherParticleIndex == particleIndex)
+                continue;
+            Particle otherParticle = _Particles[otherParticleIndex];
             float dst = length(otherParticle.position - position);
             float influence = ViscosityKernel(dst, _ParticleRadius);
             viscosityForce -= (p.velocity - otherParticle.velocity) * influence;
@@ -492,7 +499,8 @@ void CalculateDensity(uint3 id : SV_DispatchThreadID)
     float3 predictionPosition = p.position + p.velocity * 1 / 120.0f;
     _PredictPosition[id.x] = predictionPosition;
     //_Density[id.x] = CalculateDensity3D(_PredictPosition[id.x]);
-    _Density[id.x] = CalculateDensity3D(p.position);
+    //_Density[id.x] = CalculateDensity3D(p.position);
+    _Density[id.x] = CalculateDensity3DWithAcceleration(p.position);
     //_Density[id.x] = CalculateDensity3DWithAcceleration(predictionPosition);
     //_Temp1Data[id.x] = _CellStart[CalculateHashKey(predictionPosition)];
 }
@@ -505,11 +513,11 @@ void CalculateVelocity(uint3 id : SV_DispatchThreadID)
     
     float density = _Density[id.x];
     // calVelocity
-    float3 pressureForce = CalculatePressureForce(id.x);
-    //float3 pressureForce = CalculatePressureForceWithAcceleration(id.x,density);
+    //float3 pressureForce = CalculatePressureForce(id.x);
+    float3 pressureForce = CalculatePressureForceWithAcceleration(id.x,density);
     float3 pressureAcceleration = pressureForce / density;
-    float3 viscosityForce = CalculateViscosityForce(id.x);
-    //float3 viscosityForce = CalculateViscosityForceWithAcceleration(id.x);
+    //float3 viscosityForce = CalculateViscosityForce(id.x);
+    float3 viscosityForce = CalculateViscosityForceWithAcceleration(id.x);
     float3 viscosityAcceleration = viscosityForce / density;
     
     p.velocity.y -= _Gravity * _DeltaTime;
@@ -590,6 +598,7 @@ void CalculateLocalPrefixSum(uint3 id : SV_DispatchThreadID,uint GI:SV_GroupInde
 
 
 [numthreads(THREAD_NUM_X, 1, 1)]
+//[numthreads(THREAD_NUM2, 1, 1)]
 void CalculateGlobalPrefixSum(uint3 id : SV_DispatchThreadID, uint GI : SV_GroupIndex, uint3 Gid : SV_GroupID)
 {
     //load date to shared memort
@@ -605,6 +614,7 @@ void CalculateGlobalPrefixSum(uint3 id : SV_DispatchThreadID, uint GI : SV_Group
     
     //calc counter prefix sum
     CalculateLocalPrefixSum(GI);
+    //CalculateGlobalPrefixSum(GI);
     
     _BlockPrefixSumData[id.x] = localPrefixSum[GI];
 }
@@ -645,8 +655,7 @@ void ExecuteRadixSort(uint3 id : SV_DispatchThreadID, uint GI : SV_GroupIndex, u
     int globalPosition = _BlockPrefixSumData[sortData * _ThreadGroupCount + Gid.x] + _LocalPrefixSumData[id.x];
     
     // For Debug
-    //_TempData[id.x] = globalPosition;
-    //_Temp2Data[id.x] = _LocalPrefixSumData[id.x];
+    _TempData[id.x] = globalPosition;
     
     _GlobalPosition[id.x] = globalPosition;
 }
@@ -684,6 +693,8 @@ void CalculateStartAndEndIndex(uint3 DTid : SV_DispatchThreadID, uint GI : SV_Gr
             sharedHash[0] = _HashTable[DTid.x - 1];
         }
     }
+    if (DTid.x == 0)
+        sharedHash[0] = -1;
 
     GroupMemoryBarrierWithGroupSync();
 
