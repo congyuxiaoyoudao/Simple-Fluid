@@ -1,0 +1,232 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel BilateralFilterHorizontalMain
+#pragma kernel BilateralFilterVerticalMain
+#pragma kernel GaussianBlurVerticalMain
+
+// Input: Depth texture from the previous pass
+// The PBFRenderPass sets this globally using ShaderPropertyId.FluidDepth
+Texture2D<float> _FluidDepthTexture; // Assuming depth is stored in the R channel as float
+
+// Intermediate: lateral filtered Depth texture
+RWTexture2D<float> _FluidIntermediateDepthTexture;
+
+// Output: Smoothed Depth texture
+RWTexture2D<float> _FluidSmoothedDepthTexture;
+
+// #pragma thread_group_size 1 64 1
+
+// Camera parameters (set by the C# pass)
+float2 _ScreenParams; // x: width, y: height
+
+// Bilateral Filter parameters
+int _KernelRadius = 8;
+#define MAX_KERNEL_RADIUS 16
+
+float sigma_d = 2.0f; // spatial 
+float sigma_r = 2.0f; // range
+
+float _INV_2SIGMA_D_SQ = 0.0125f;
+float _INV_2SIGMA_R_SQ = 0.0125f;
+
+groupshared float bilateralCachedDepth[64 + 2 * MAX_KERNEL_RADIUS]; // exceed 2*MAX_KERNEL_RADIUS as padding
+
+// Horizontal bilateral filter
+[numthreads(64,1,1)]
+void BilateralFilterHorizontalMain(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex) 
+{
+    // couldn't write as below, because the compiler will optimize it out
+    // float inv_2sigma_d_sr = 1.0f / (2.0f*sigma_d*sigma_d);
+    // float inv_2sigma_r_sr = 1.0f / (2.0f*sigma_r*sigma_r);
+    // float inv_2sigma_d_sr = 0.01f;
+    // float inv_2sigma_r_sr = 0.01f;
+
+    int2 currentCoord = clamp(id.xy,0,_ScreenParams.xy-1);
+    float currentDepth = _FluidDepthTexture[currentCoord];
+
+    // Before literally do filtering, load the data into shared memory
+    // each thread store centered depth and leave padding for upper and lower parts
+    // so this basically fill the shared memory from KERNEL_RADIUS to 63 + KERNEL_RADIUS :)
+    bilateralCachedDepth[groupIndex+_KernelRadius] = currentDepth;
+
+    // fill the lower padding: 0...KERNEL_RADIUS-1
+    if(groupIndex < _KernelRadius)
+    {
+        int2 expectedCoord = currentCoord - int2(_KernelRadius,0);
+        int2 sampleCoord = clamp(expectedCoord,0,int2(_ScreenParams.x-1,_ScreenParams.y-1));
+     
+        bilateralCachedDepth[groupIndex] = _FluidDepthTexture[sampleCoord];
+    }
+    // fill the upper padding: 64 + KERNEL_RADIUS...63 + 2KERNEL_RADIUS
+    if(groupIndex >= 64 - _KernelRadius)
+    {
+        int2 expectedCoord = currentCoord + int2(_KernelRadius,0);
+        int2 sampleCoord = clamp(expectedCoord,0,int2(_ScreenParams.x-1,_ScreenParams.y-1));
+        
+        bilateralCachedDepth[groupIndex + 2 * _KernelRadius] = _FluidDepthTexture[sampleCoord];
+    }
+    
+    // group sync
+    GroupMemoryBarrierWithGroupSync();
+
+    float sum = 0.0f;
+    float weightSum = 0.0f;
+    
+    // begin bilateral filtering
+    for(int i = -_KernelRadius; i <= _KernelRadius; i++)
+    {
+        // remap from iterator i to cached depth index
+        // -KERNEL_RADIUS --> groupIndex
+        // 0 --> groupIndex + KERNEL_RADIUS
+        // KERNEL_RADIUS --> groupIndex + 2 * KERNEL_RADIUS
+        int cachedDepthIndex = (int)groupIndex + _KernelRadius + i;
+
+        // compute spatial domain weight
+        float d2 = i * i;
+        float g = exp(-d2 * _INV_2SIGMA_D_SQ);
+
+        // compute range domain weight
+        float sampledDepth = bilateralCachedDepth[cachedDepthIndex];
+        float deltaDepth2 = pow(sampledDepth - currentDepth,2);
+        float r = exp(-deltaDepth2 * _INV_2SIGMA_R_SQ);
+
+        // sum up
+        float w = g * r;
+        weightSum += w;
+        sum += sampledDepth * w;
+    }
+
+    // write smoothed depth texture
+    float smoothedDepth = (weightSum > 0.0f) ? sum / weightSum : currentDepth;
+    _FluidIntermediateDepthTexture[id.xy] = smoothedDepth;
+}
+
+[numthreads(1,64,1)]
+void BilateralFilterVerticalMain(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex) 
+{
+    // precomputed this in the C# code
+    // float inv_2sigma_d_sr = 1.0f / (2.0f*sigma_d*sigma_d);
+    // float inv_2sigma_r_sr = 1.0f / (2.0f*sigma_r*sigma_r);
+    // float inv_2sigma_d_sr = 0.125f;
+    // float inv_2sigma_r_sr = 0.125f;
+
+    int2 currentCoord = clamp(id.xy,0,_ScreenParams.xy-1);
+    float currentDepth = _FluidIntermediateDepthTexture[currentCoord];
+
+    // Before literally do filtering, load the data into shared memory
+    // each thread store centered depth and leave padding for upper and lower parts
+    // so this basically fill the shared memory from KERNEL_RADIUS to 63 + KERNEL_RADIUS :)
+    bilateralCachedDepth[groupIndex+_KernelRadius] = currentDepth;
+
+    // fill the lower padding: 0...KERNEL_RADIUS-1
+    if(groupIndex < _KernelRadius)
+    {
+        int2 expectedCoord = currentCoord - int2(0,_KernelRadius);
+        int2 sampleCoord = clamp(expectedCoord,0,int2(_ScreenParams.x-1,_ScreenParams.y-1));
+     
+        bilateralCachedDepth[groupIndex] = _FluidIntermediateDepthTexture[sampleCoord];
+    }
+    // fill the upper padding: 64 + KERNEL_RADIUS...63 + 2KERNEL_RADIUS
+    if(groupIndex >= 64 - _KernelRadius)
+    {
+        int2 expectedCoord = currentCoord + int2(0,_KernelRadius);
+        int2 sampleCoord = clamp(expectedCoord,0,int2(_ScreenParams.x-1,_ScreenParams.y-1));
+        
+        bilateralCachedDepth[groupIndex + 2 * _KernelRadius] = _FluidIntermediateDepthTexture[sampleCoord];
+    }
+    
+    // group sync
+    GroupMemoryBarrierWithGroupSync();
+
+    float sum = 0.0f;
+    float weightSum = 0.0f;
+    
+    // begin bilateral filtering
+    for(int i = -_KernelRadius; i <= _KernelRadius; i++)
+    {
+        // remap from iterator i to cached depth index
+        // -KERNEL_RADIUS --> groupIndex
+        // 0 --> groupIndex + KERNEL_RADIUS
+        // KERNEL_RADIUS --> groupIndex + 2 * KERNEL_RADIUS
+        int cachedDepthIndex = (int)groupIndex + _KernelRadius + i;
+
+        // compute spatial domain weight
+        float d2 = i * i;
+        float g = exp(-d2 * _INV_2SIGMA_D_SQ);
+
+        // compute range domain weight
+        float sampledDepth = bilateralCachedDepth[cachedDepthIndex];
+        float deltaDepth2 = pow(sampledDepth - currentDepth,2);
+        float r = exp(-deltaDepth2 * _INV_2SIGMA_R_SQ);
+
+        // sum up
+        float w = g * r;
+        weightSum += w;
+        sum += sampledDepth * w;
+    }
+
+    // write smoothed depth texture
+    float smoothedDepth = (weightSum > 0.0f) ? sum / weightSum : currentDepth;
+    _FluidSmoothedDepthTexture[id.xy] = smoothedDepth;
+}
+
+// Deprecated: just use gaussian for test!
+static float gaussian17[] =
+{
+    0.00002611081194810,
+    0.00021522769030413,
+    0.00133919168719865,
+    0.00628987509902766,
+    0.02229954363469697,
+    0.05967667338326389,
+    0.12055019394312867,
+    0.18381709484250766,
+    0.21157217927735517,
+    0.18381709484250766,
+    0.12055019394312867,
+    0.05967667338326389,
+    0.02229954363469697,
+    0.00628987509902766,
+    0.00133919168719865,
+    0.00021522769030413,
+    0.00002611081194810,
+};
+
+groupshared float3 gs_Color[64 + 2 * MAX_KERNEL_RADIUS];
+
+[numthreads(1, 64, 1)]
+void GaussianBlurVerticalMain(uint3 id : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
+{
+    int2 currentPosition = id.xy;
+    int2 tempPosition = clamp(currentPosition, 0, _ScreenParams.xy - 1);
+    gs_Color[groupIndex + _KernelRadius] = _FluidDepthTexture.Load(uint3(tempPosition, 0));
+
+    if (groupIndex < _KernelRadius)
+    {
+        int2 extraSample = currentPosition - int2(0, _KernelRadius);
+        extraSample = clamp(extraSample, 0, _ScreenParams.xy - 1);
+        gs_Color[groupIndex] = _FluidDepthTexture.Load(uint3(extraSample, 0));
+    }
+
+    if (groupIndex >= 64 - _KernelRadius)
+    {
+        int2 extraSample = currentPosition + int2(0, _KernelRadius);
+        extraSample = clamp(extraSample, 0, _ScreenParams.xy - 1);
+        gs_Color[groupIndex + 2 * _KernelRadius] = _FluidDepthTexture.Load(uint3(extraSample, 0));
+    }
+    GroupMemoryBarrierWithGroupSync();
+
+    float3 color = 0;
+    for (uint i = 0; i < 17; i++)
+    {
+        float weight = gaussian17[i];
+        float sampleOffset = ((float)i - 8) * 8 * 0.125;
+        int floorInt = floor(sampleOffset);
+        float lerpValue = sampleOffset - floorInt;
+        float3 sampleColorFloor = gs_Color[groupIndex + _KernelRadius + floorInt];
+        float3 sampleColorCeil = gs_Color[groupIndex + _KernelRadius + floorInt + 1];
+        float3 sampleColor = lerp(sampleColorFloor, sampleColorCeil, lerpValue);
+        color += sampleColor* weight;
+    }
+
+    _FluidSmoothedDepthTexture[id.xy] = float4(color, 1);
+}
