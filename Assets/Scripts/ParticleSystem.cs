@@ -774,7 +774,7 @@ public class ParticleSystem : MonoBehaviour
         }
 
         // 7. ������ʱ����
-        //GameObject.Destroy(tempObj);
+        GameObject.Destroy(tempObj);
     }
 
     bool IsPointInMesh(Vector3 point, MeshCollider collider)

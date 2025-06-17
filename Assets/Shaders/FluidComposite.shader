@@ -13,9 +13,9 @@ Shader "PBF/FluidComposite"
         {
             Name "PBF_Composite_Pass"
 
-//            ZTest LEqual
+            ZTest LEqual
             Blend SrcAlpha OneMinusSrcAlpha
-//            ZWrite Off
+            ZWrite On
 
             HLSLPROGRAM
             #pragma vertex VS
@@ -227,12 +227,12 @@ Shader "PBF/FluidComposite"
                 // composite final fluid luminance
                 float3 transmittance = lerp(refractColor,_ScatterColor,_Turbidity * 0.5);
                 float3 luminance = lerp(transmittance, reflectColor*0.5, fresnel);
-                // float sceneRawDepth = SAMPLE_TEXTURE2D_X(_CameraDepthTexture,sampler_CameraDepthTexture,screenUV).r;
-                // float sceneLinearDepth = LinearEyeDepth(sceneRawDepth, _ZBufferParams);
-                // float3 sceneColor = SAMPLE_TEXTURE2D_X(_CameraOpaqueTexture,sampler_CameraOpaqueTexture,screenUV).rgb;
-                // if(sceneLinearDepth <= fluidDepth)
-                //     luminance = sceneColor;
-                float alpha = saturate(thickness);
+                float sceneRawDepth = SAMPLE_TEXTURE2D_X(_CameraDepthTexture,sampler_CameraDepthTexture,screenUV).r;
+                float sceneLinearDepth = LinearEyeDepth(sceneRawDepth, _ZBufferParams);
+                float3 sceneColor = SAMPLE_TEXTURE2D_X(_CameraOpaqueTexture,sampler_CameraOpaqueTexture,screenUV).rgb;
+                if(sceneLinearDepth <= fluidDepth)
+                    luminance = sceneColor;
+                float alpha = pow(saturate(thickness),3.0);
                 return float4(luminance,alpha);
 
             }
