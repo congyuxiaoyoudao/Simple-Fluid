@@ -132,6 +132,32 @@ float rand(float2 seed)
     return frac(sin(dot(seed, float2(12.9898, 78.233))) * 43758.5453);
 }
 
+float rand(float seed)
+{
+    return frac(sin(seed) * 43758.5453);
+}
+
+float3 randomUnitVector(float id, float t)
+{
+    float seed = id * 12.9898 + t * 78.233;
+    
+    float a = rand(seed);
+    float b = rand(seed + 100.0);
+    
+    float theta = 2.0 * PI * a;
+    float phi = acos(2.0 * b - 1.0);
+
+    float sinPhi = sin(phi);
+    float cosTheta = cos(theta);
+    float sinTheta = sin(theta);
+
+    return float3(
+        cosTheta * sinPhi,
+        sinTheta * sinPhi,
+        cos(phi)
+    );
+}
+
 float sdSphere(float3 p, float s)
 {
     return length(p) - s;
@@ -154,9 +180,9 @@ static int CellCoordToCellHash(int3 cellCoord)
 // TODO: Solve the hash collision
 static uint CellHashToHashKey(uint cellHash)
 {
-    cellHash %= 16384;
+    cellHash %= _ParticleCount;
     if (cellHash < 0)
-        cellHash += 16384;
+        cellHash += _ParticleCount;
     return cellHash;
 }
 
@@ -397,7 +423,7 @@ static float3 CalculatePressureForceWithAcceleration(int particleIndex,float par
             float3 offset = _Particles[_ParticleIndex[j]].position - _Particles[particleIndex].position;
             float dst = length(offset);
         
-            float3 dir = dst < 0.001f ? float3(0, 1, 0) : offset / dst;
+            float3 dir = dst < 0.001f ? randomUnitVector(particleIndex, _DeltaTime) : offset / dst;
             float slope = SharpingKernelDerivative(dst, _ParticleRadius);
             float density = _Density[j];
             float sharedPressure = CalculateSharedPressure(density, particleDensity);
@@ -419,7 +445,7 @@ static float3 CalculatePressureForce(int particleIndex)
         float3 offset = _Particles[otherParticleIndex].position - _Particles[particleIndex].position;
         float dst = length(offset);
         
-        float3 dir = dst< 0.001f ? float3(0,1,0) : offset / dst;
+        float3 dir = dst < 0.001f ? randomUnitVector(particleIndex, _DeltaTime) : offset / dst;
         float slope = SharpingKernelDerivative(dst, _ParticleRadius);
         float density = _Density[otherParticleIndex];
         float sharedPressure = CalculateSharedPressure(density, _Density[particleIndex]);

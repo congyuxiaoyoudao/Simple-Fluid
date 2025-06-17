@@ -393,7 +393,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &832575518
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -471,7 +471,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4c6cd91bda2f8c84cbc62208db8e1c1d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  particleCount: 16384
+  particleCount: 8192
   areaSize: 4
   gravity: {x: 0, y: 9.8, z: 0}
   particleMass: 1
@@ -479,11 +479,11 @@ MonoBehaviour:
   particleSize: 0.1
   particleColor: {r: 1, g: 1, b: 1, a: 1}
   targetDensity: 1
-  pressureMultiplier: 14.13
+  pressureMultiplier: 10
   viscosityStrength: 0.1
   computeShader: {fileID: 7200000, guid: d2e4cf3e958aa654abdb9dcef4f638b1, type: 3}
   debugMaterial: {fileID: 2100000, guid: 393b2b7a25efe094eb6e8844f554d285, type: 2}
-  particleMesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+  particleMesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
   hashTestGO: {fileID: 0}
   onGizmos: 0
 --- !u!1001 &939854804

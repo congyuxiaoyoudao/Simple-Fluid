@@ -146,8 +146,8 @@ public class ParticleSystem : MonoBehaviour
         // ��ʼ����������
         Particle[] particles = new Particle[particleCount];
 
-        DistributeInVolumeRandom(particles , particleMesh , particleCount);  //����ֲ�
-        //DistributeInVolume(particles, particleMesh, particleCount);            //�����طֲ�
+        //DistributeInVolumeRandom(particles , particleMesh , particleCount);  //����ֲ�
+        DistributeInVolume(particles, particleMesh, particleCount);            //�����طֲ�
 
         //float spacing = areaSize / Mathf.Ceil(Mathf.Sqrt(particleCount));
         //// ����ÿ��ÿ�е�������
@@ -180,8 +180,8 @@ public class ParticleSystem : MonoBehaviour
         //        -areaSize + z * spacing
         //    ) + transform.position;
 
-        // ��ʼ�ٶ�Ϊ0
-        //    particles[i].velocity = Vector3.zero;
+        //    //��ʼ�ٶ�Ϊ0
+        //    //   particles[i].velocity = Vector3.zero;
         //}
 
         // ����ComputeBuffer
@@ -257,6 +257,8 @@ public class ParticleSystem : MonoBehaviour
     }
     public ComputeBuffer GetParticleBuffer() => _particleBuffer;
     public int GetParticleCount() => particleCount;
+
+    public ComputeBuffer GetDensityBuffer() => _densityBuffer;
 
     void CreateMaterial()
     {
@@ -369,108 +371,115 @@ public class ParticleSystem : MonoBehaviour
 
 
         //// ����Particle��Positionֵ��ʼ��HashTable��ֵ
-        //computeShader.SetBuffer(calculateHashTableKernelID, particlesID, _particleBuffer);//SetBuffer�������Ŀ��Ժ��Բ���
-        //computeShader.SetBuffer(calculateHashTableKernelID, hashTableID, _hashTableBuffer);
-        //computeShader.Dispatch(calculateHashTableKernelID, threadGroups, 1, 1);
+        computeShader.SetBuffer(calculateHashTableKernelID, particlesID, _particleBuffer);//SetBuffer�������Ŀ��Ժ��Բ���
+        computeShader.SetBuffer(calculateHashTableKernelID, hashTableID, _hashTableBuffer);
+        computeShader.Dispatch(calculateHashTableKernelID, threadGroups, 1, 1);
+
+        // ��ʼ����������ֵ
+        computeShader.SetBuffer(initParticleIndexKernelID, particleIndexID, _particleIndexBuffer);
+        computeShader.Dispatch(initParticleIndexKernelID, threadGroups, 1, 1);
 
 
 
-        //for (int i = 1; i <= 3; i++)
-        //{
-        //    // ��ʼ��BlockData��ֵΪ 0
-        //    computeShader.SetBuffer(initBlockDataKernelID, blockDataID, _blockDataBuffer);
-        //    computeShader.Dispatch(initBlockDataKernelID, threadGroup2, 1, 1);
+        for (int i = 1; i <= 4; i++)
+        {
+            // ��ʼ��BlockData��ֵΪ 0
+            computeShader.SetBuffer(initBlockDataKernelID, blockDataID, _blockDataBuffer);
+            computeShader.Dispatch(initBlockDataKernelID, threadGroup2, 1, 1);
 
-        //    // ����LocalPrefixSum
-        //    computeShader.SetInt("_Digit", i - 1);
-        //    computeShader.SetBuffer(calculateLocalPrefixSumKernelID, hashTableID, _hashTableBuffer);
-        //    computeShader.SetBuffer(calculateLocalPrefixSumKernelID, blockDataID, _blockDataBuffer);
-        //    computeShader.SetBuffer(calculateLocalPrefixSumKernelID, localPrefixSumDataID, _localPrefixSumBuffer);
-        //    computeShader.SetBuffer(calculateLocalPrefixSumKernelID, temp2DataID, _temp2Buffer);
-        //    computeShader.Dispatch(calculateLocalPrefixSumKernelID, threadGroups, 1, 1);
+            // ����LocalPrefixSum
+            computeShader.SetInt("_Digit", i - 1);
+            computeShader.SetBuffer(calculateLocalPrefixSumKernelID, hashTableID, _hashTableBuffer);
+            computeShader.SetBuffer(calculateLocalPrefixSumKernelID, blockDataID, _blockDataBuffer);
+            computeShader.SetBuffer(calculateLocalPrefixSumKernelID, localPrefixSumDataID, _localPrefixSumBuffer);
+            computeShader.SetBuffer(calculateLocalPrefixSumKernelID, temp2DataID, _temp2Buffer);
+            computeShader.Dispatch(calculateLocalPrefixSumKernelID, threadGroups, 1, 1);
 
-        //    // ��ȡBlockData���� ����Debug
-        //    //temp2Data = new int[threadGroup2];
-        //    //_blockDataBuffer.GetData(temp2Data);
+            // ��ȡBlockData���� ����Debug
+            //temp2Data = new int[threadGroup2];
+            //_blockDataBuffer.GetData(temp2Data);
 
-        //    // ����GlobalPrefixSum
-        //    computeShader.SetBuffer(calculateGlobalPrefixSumKernelID, blockDataID, _blockDataBuffer);
-        //    computeShader.SetBuffer(calculateGlobalPrefixSumKernelID, blockPrefixSumDataID, _blockPrefixSumBuffer);
-        //    computeShader.SetBuffer(calculateGlobalPrefixSumKernelID, blockPrefixSumOutputID, _blockPrefixSumOutputBuffer);
-        //    computeShader.Dispatch(calculateGlobalPrefixSumKernelID, threadGroup2, 1, 1);
+            // ����GlobalPrefixSum
+            computeShader.SetBuffer(calculateGlobalPrefixSumKernelID, blockDataID, _blockDataBuffer);
+            computeShader.SetBuffer(calculateGlobalPrefixSumKernelID, blockPrefixSumDataID, _blockPrefixSumBuffer);
+            computeShader.SetBuffer(calculateGlobalPrefixSumKernelID, blockPrefixSumOutputID, _blockPrefixSumOutputBuffer);
+            computeShader.Dispatch(calculateGlobalPrefixSumKernelID, threadGroup2, 1, 1);
 
-        //    computeShader.SetBuffer(calculateGlobalPrefixSum2KernelID, blockDataID, _blockDataBuffer);
-        //    computeShader.SetBuffer(calculateGlobalPrefixSum2KernelID, blockPrefixSumDataID, _blockPrefixSumBuffer);
-        //    computeShader.SetBuffer(calculateGlobalPrefixSum2KernelID, blockPrefixSumOutputID, _blockPrefixSumOutputBuffer);
-        //    computeShader.Dispatch(calculateGlobalPrefixSum2KernelID, threadGroup2, 1, 1);
+            computeShader.SetBuffer(calculateGlobalPrefixSum2KernelID, blockDataID, _blockDataBuffer);
+            computeShader.SetBuffer(calculateGlobalPrefixSum2KernelID, blockPrefixSumDataID, _blockPrefixSumBuffer);
+            computeShader.SetBuffer(calculateGlobalPrefixSum2KernelID, blockPrefixSumOutputID, _blockPrefixSumOutputBuffer);
+            computeShader.Dispatch(calculateGlobalPrefixSum2KernelID, threadGroup2, 1, 1);
 
-        //    // ��ȡ�������Hash���� ����Debug
-        //    //hashKey = new int[particleCount];
-        //    //hash4bitsKey = new int[particleCount];
-        //    //_hashTableBuffer.GetData(hashKey);
-        //    //for (int j = 0; j < particleCount; j++)
-        //    //{
-        //    //    hash4bitsKey[j] = get4Bits(hashKey[j], i - 1);
-        //    //}
-        //    //Debug.Log("Sort hash" + i + ":   " + string.Join(", ", hashKey));
-        //    //Debug.Log("Sort 4bits hash" + i + ":   " + string.Join(", ", hash4bitsKey));
+            // ��ȡ�������Hash���� ����Debug
+            //hashKey = new int[particleCount];
+            //hash4bitsKey = new int[particleCount];
+            //_hashTableBuffer.GetData(hashKey);
+            //for (int j = 0; j < particleCount; j++)
+            //{
+            //    hash4bitsKey[j] = get4Bits(hashKey[j], i - 1);
+            //}
+            //Debug.Log("Sort hash" + i + ":   " + string.Join(", ", hashKey));
+            //Debug.Log("Sort 4bits hash" + i + ":   " + string.Join(", ", hash4bitsKey));
 
-        //    // ����GlobalPosition
-        //    computeShader.SetBuffer(executeRadixSortKernelID, hashTableID, _hashTableBuffer);
-        //    computeShader.SetBuffer(executeRadixSortKernelID, blockDataID, _blockDataBuffer);
-        //    computeShader.SetBuffer(executeRadixSortKernelID, localPrefixSumDataID, _localPrefixSumBuffer);
-        //    //computeShader.SetBuffer(executeRadixSortKernelID, particlesID, _particleBuffer);
-        //    computeShader.SetBuffer(executeRadixSortKernelID, particleIndexID, _particleIndexBuffer);
-        //    computeShader.SetBuffer(executeRadixSortKernelID, "_HashTableTemp", _hashTableTempBuffer);
-        //    computeShader.SetBuffer(executeRadixSortKernelID, "_ParticleIndexTemp", _particleIndexTempBuffer);
-        //    computeShader.SetBuffer(executeRadixSortKernelID, "_GlobalPosition", _globalPositionBuffer);
-        //    computeShader.SetBuffer(executeRadixSortKernelID, blockPrefixSumDataID, _blockPrefixSumOutputBuffer);
-        //    computeShader.SetBuffer(executeRadixSortKernelID, tempDataID, _tempBuffer);
-        //    computeShader.SetBuffer(executeRadixSortKernelID, temp1DataID, _temp1Buffer);
-        //    //computeShader.SetBuffer(executeRadixSortKernelID, temp2DataID, _temp2Buffer);
-        //    computeShader.Dispatch(executeRadixSortKernelID, threadGroups, 1, 1);
+            // ����GlobalPosition
+            computeShader.SetBuffer(executeRadixSortKernelID, hashTableID, _hashTableBuffer);
+            computeShader.SetBuffer(executeRadixSortKernelID, blockDataID, _blockDataBuffer);
+            computeShader.SetBuffer(executeRadixSortKernelID, localPrefixSumDataID, _localPrefixSumBuffer);
+            //computeShader.SetBuffer(executeRadixSortKernelID, particlesID, _particleBuffer);
+            computeShader.SetBuffer(executeRadixSortKernelID, particleIndexID, _particleIndexBuffer);
+            computeShader.SetBuffer(executeRadixSortKernelID, "_HashTableTemp", _hashTableTempBuffer);
+            computeShader.SetBuffer(executeRadixSortKernelID, "_ParticleIndexTemp", _particleIndexTempBuffer);
+            computeShader.SetBuffer(executeRadixSortKernelID, "_GlobalPosition", _globalPositionBuffer);
+            computeShader.SetBuffer(executeRadixSortKernelID, blockPrefixSumDataID, _blockPrefixSumOutputBuffer);
+            computeShader.SetBuffer(executeRadixSortKernelID, tempDataID, _tempBuffer);
+            computeShader.SetBuffer(executeRadixSortKernelID, temp1DataID, _temp1Buffer);
+            //computeShader.SetBuffer(executeRadixSortKernelID, temp2DataID, _temp2Buffer);
+            computeShader.Dispatch(executeRadixSortKernelID, threadGroups, 1, 1);
 
-        //    // ����GlobalPosition���ݵ�׼ȷ��
-        //    //tempData = new int[particleCount];
-        //    //_tempBuffer.GetData(tempData);
-        //    //DebugSort(tempData, 8192, i);
+            // ����GlobalPosition���ݵ�׼ȷ��
+            //tempData = new int[particleCount];
+            //_tempBuffer.GetData(tempData);
+            //DebugSort(tempData, particleCount, i);
 
-        //    // ����GlobalPosition��ӳ��
-        //    computeShader.SetBuffer(changeParticlesIndexKernelID, "_GlobalPosition", _globalPositionBuffer);
-        //    computeShader.SetBuffer(changeParticlesIndexKernelID, "_ParticleIndexTemp", _particleIndexTempBuffer);
+            // ����GlobalPosition��ӳ��
+            computeShader.SetBuffer(changeParticlesIndexKernelID, "_GlobalPosition", _globalPositionBuffer);
+            computeShader.SetBuffer(changeParticlesIndexKernelID, "_ParticleIndexTemp", _particleIndexTempBuffer);
 
-        //    computeShader.SetBuffer(changeParticlesIndexKernelID, "_HashTableTemp", _hashTableTempBuffer);
-        //    computeShader.SetBuffer(changeParticlesIndexKernelID, hashTableID, _hashTableBuffer);
-        //    computeShader.SetBuffer(changeParticlesIndexKernelID, particleIndexID, _particleIndexBuffer);
-        //    computeShader.Dispatch(changeParticlesIndexKernelID, threadGroups, 1, 1);
+            computeShader.SetBuffer(changeParticlesIndexKernelID, "_HashTableTemp", _hashTableTempBuffer);
+            computeShader.SetBuffer(changeParticlesIndexKernelID, hashTableID, _hashTableBuffer);
+            computeShader.SetBuffer(changeParticlesIndexKernelID, particleIndexID, _particleIndexBuffer);
+            computeShader.Dispatch(changeParticlesIndexKernelID, threadGroups, 1, 1);
 
-        //    // ����������Hashֵ
-        //    //hashKey = new int[particleCount];
-        //    //_hashTableBuffer.GetData(hashKey);
-        //    //for (int j = 0; j < particleCount; j++)
-        //    //{
-        //    //    hash4bitsKey[j] = get4Bits(hashKey[j], i - 1);
-        //    //}
-        //    //Debug.Log("Sorted hash" + i + ":   " + string.Join(", ", hashKey));
-        //    //Debug.Log("Sorted 4bits hash" + i + ":   " + string.Join(", ", hash4bitsKey));
-        //}
+            // ����������Hashֵ
+            //hashKey = new int[particleCount];
+            //_hashTableBuffer.GetData(hashKey);
+            //for (int j = 0; j < particleCount; j++)
+            //{
+            //    hash4bitsKey[j] = get4Bits(hashKey[j], i - 1);
+            //}
+            //Debug.Log("Sorted hash" + i + ":   " + string.Join(", ", hashKey));
+            //Debug.Log("Sorted 4bits hash" + i + ":   " + string.Join(", ", hash4bitsKey));
+        }
 
-        //// ��ʼ��Hash������
-        //computeShader.SetBuffer(initStartAndEndIndexKernelID, cellStartID, _cellStartBuffer);
-        //computeShader.SetBuffer(initStartAndEndIndexKernelID, cellEndID, _cellEndBuffer);
-        //computeShader.Dispatch(initStartAndEndIndexKernelID, threadGroups, 1, 1);
+        // ��ʼ��Hash������
+        computeShader.SetBuffer(initStartAndEndIndexKernelID, cellStartID, _cellStartBuffer);
+        computeShader.SetBuffer(initStartAndEndIndexKernelID, cellEndID, _cellEndBuffer);
+        computeShader.Dispatch(initStartAndEndIndexKernelID, threadGroups, 1, 1);
 
-        //// ����Hash������
-        //computeShader.SetBuffer(calculateStartAndEndIndexKernelID, hashTableID, _hashTableBuffer);
-        //computeShader.SetBuffer(calculateStartAndEndIndexKernelID, cellStartID, _cellStartBuffer);
-        //computeShader.SetBuffer(calculateStartAndEndIndexKernelID, cellEndID, _cellEndBuffer);
-        //computeShader.Dispatch(calculateStartAndEndIndexKernelID, threadGroups, 1, 1);
+        // ����Hash������
+        computeShader.SetBuffer(calculateStartAndEndIndexKernelID, hashTableID, _hashTableBuffer);
+        computeShader.SetBuffer(calculateStartAndEndIndexKernelID, cellStartID, _cellStartBuffer);
+        computeShader.SetBuffer(calculateStartAndEndIndexKernelID, cellEndID, _cellEndBuffer);
+        computeShader.Dispatch(calculateStartAndEndIndexKernelID, threadGroups, 1, 1);
 
 
         // Debug����ֵ
         //cellStartData = new int[particleCount];
         //_cellStartBuffer.GetData(cellStartData);
         //Debug.Log("CellStartBuffer" + ":   " + string.Join(", ", cellStartData));
+
+        //_cellEndBuffer.GetData(cellStartData);
+        //Debug.Log("CellEndBuffer" + ":   " + string.Join(", ", cellStartData));
 
         //// Debug����Hashֵ
         //hashKey = new int[particleCount];
@@ -517,9 +526,7 @@ public class ParticleSystem : MonoBehaviour
         computeShader.SetBuffer(calculatePositionKernelID, particlesID, _particleBuffer);//SetBuffer�������Ŀ��Ժ��Բ���
         computeShader.Dispatch(calculatePositionKernelID, threadGroups, 1, 1);
 
-        // ��ʼ����������ֵ
-        computeShader.SetBuffer(initParticleIndexKernelID, particleIndexID, _particleIndexBuffer);
-        computeShader.Dispatch(initParticleIndexKernelID, threadGroups, 1, 1);
+        
 
 
     }
@@ -767,7 +774,7 @@ public class ParticleSystem : MonoBehaviour
         }
 
         // 7. ������ʱ����
-        GameObject.Destroy(tempObj);
+        //GameObject.Destroy(tempObj);
     }
 
     bool IsPointInMesh(Vector3 point, MeshCollider collider)

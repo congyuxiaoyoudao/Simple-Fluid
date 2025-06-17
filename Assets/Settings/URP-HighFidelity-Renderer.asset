@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 82d0149fab4ce784f92dc9c5f662fe9f, type: 3}
   m_Name: PBFRenderFeature
   m_EditorClassIdentifier: 
-  m_Active: 0
+  m_Active: 1
   settings:
     renderShadowMapPassEvent: 100
     renderPreparePassEvent: 300
@@ -38,8 +38,8 @@ MonoBehaviour:
       type: 2}
     particleColor: {r: 0.030062001, g: 0.14833266, b: 0.5031446, a: 1}
     indexOfRefraction: 1.33
-    refractScalar: 0.01
-    turbidity: 0.026
+    refractScalar: 0.075
+    turbidity: 0.16
     absorptionColor: {r: 0.25157225, g: 0.022942098, b: 0.022942098, a: 1}
     scatterColor: {r: 0.24029155, g: 1, b: 0.2358489, a: 1}
 --- !u!114 &-1878332245247344467
