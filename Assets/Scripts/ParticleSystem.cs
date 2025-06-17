@@ -5,20 +5,20 @@ using UnityEngine;
 public class ParticleSystem : MonoBehaviour
 {
     [Header("Settings")]
-    public int particleCount = 1000;                        // Á£×ÓÊýÁ¿
-    public float areaSize = 5f;                             //Óò´óÐ¡
-    public Vector3 gravity = new Vector3(0, 9.8f, 0);       //ÖØÁ¦´óÐ¡/·½Ïò
-    public float particleMass = 1.0f;                       //Á£×ÓÖÊÁ¿
-    public float particleRadius = 1.0f;                     //Á£×Ó°ë¾¶
-    public float particleSize = 0.1f;                       //Á£×Ó´óÐ¡
-    public Color particleColor = Color.white;               //Á£×ÓÑÕÉ«
+    public int particleCount = 1000;                        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    public float areaSize = 5f;                             //ï¿½ï¿½ï¿½Ð¡
+    public Vector3 gravity = new Vector3(0, 9.8f, 0);       //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡/ï¿½ï¿½ï¿½ï¿½
+    public float particleMass = 1.0f;                       //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    public float particleRadius = 1.0f;                     //ï¿½ï¿½ï¿½Ó°ë¾¶
+    public float particleSize = 0.1f;                       //ï¿½ï¿½ï¿½Ó´ï¿½Ð¡
+    public Color particleColor = Color.white;               //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É«
 
-    public float targetDensity = 1;                         //Ä¿±êÃÜ¶È
-    public float pressureMultiplier = 1;                    //Ñ¹Á¦ÏµÊý
-    public float viscosityStrength = 1;                     //Õ³¶ÈÏµÊý
+    public float targetDensity = 1;                         //Ä¿ï¿½ï¿½ï¿½Ü¶ï¿½
+    public float pressureMultiplier = 1;                    //Ñ¹ï¿½ï¿½Ïµï¿½ï¿½
+    public float viscosityStrength = 1;                     //Õ³ï¿½ï¿½Ïµï¿½ï¿½
 
     [Header("References")]
-    public ComputeShader computeShader;                     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É«ï¿½ï¿?
+    public ComputeShader computeShader;                     // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É«ï¿½ï¿½?
     public Material debugMaterial;
     public Mesh particleMesh;                               // Ê¹ï¿½ï¿½Quadï¿½ï¿½Sphere
 
@@ -57,7 +57,7 @@ public class ParticleSystem : MonoBehaviour
     private int[] cellStartData;
 
 
-    // ²ÎÊýÌáÇ°ÉùÃ÷
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½
     private static int calculateDensityKernelID = -1,
                     calculateHashTableKernelID = -1,
                     calculatePositionKernelID = -1,
@@ -123,7 +123,7 @@ public class ParticleSystem : MonoBehaviour
         CreateMaterial();
     }
 
-    // »ñÈ¡ËùÓÐÐèÒªµÄKernel
+    // ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½Kernel
     void FindAllKernels()
     {
         calculateHashTableKernelID = computeShader.FindKernel("CalculateHashTable");
@@ -146,8 +146,8 @@ public class ParticleSystem : MonoBehaviour
         // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         Particle[] particles = new Particle[particleCount];
 
-        DistributeInVolumeRandom(particles , particleMesh , particleCount);  //Ëæ»ú·Ö²¼
-        //DistributeInVolume(particles, particleMesh, particleCount);            //°´ÌåËØ·Ö²¼
+        DistributeInVolumeRandom(particles , particleMesh , particleCount);  //ï¿½ï¿½ï¿½ï¿½Ö²ï¿½
+        //DistributeInVolume(particles, particleMesh, particleCount);            //ï¿½ï¿½ï¿½ï¿½ï¿½Ø·Ö²ï¿½
 
         //float spacing = areaSize / Mathf.Ceil(Mathf.Sqrt(particleCount));
         //// ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½Ã¿ï¿½Ðµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
@@ -162,7 +162,7 @@ public class ParticleSystem : MonoBehaviour
         //    //    0
         //    //) + transform.position;
 
-        //    // y=0Æ½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿?
+        //    // y=0Æ½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½?
         //    //particles[i].position = new Vector3(
         //    //   Random.Range(-areaSize, areaSize),
         //    //   //Random.Range(0, areaSize),
@@ -176,7 +176,7 @@ public class ParticleSystem : MonoBehaviour
 
         //    particles[i].position = new Vector3(
         //        -areaSize + x * spacing,
-        //        0, // Yï¿½ï¿½Ì¶ï¿½Î?
+        //        0, // Yï¿½ï¿½Ì¶ï¿½ï¿½?
         //        -areaSize + z * spacing
         //    ) + transform.position;
 
@@ -184,9 +184,9 @@ public class ParticleSystem : MonoBehaviour
         //    particles[i].velocity = Vector3.zero;
         //}
 
-        // ´´½¨ComputeBuffer
+        // ï¿½ï¿½ï¿½ï¿½ComputeBuffer
         _particleBuffer = new ComputeBuffer(particleCount, particleStructStride);
-        _particleBuffer.SetData(particles);//SetDataÊ±»áÔö¼ÓCPUÓëGPUÖ®¼äµÄ´ø¿í
+        _particleBuffer.SetData(particles);//SetDataÊ±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½CPUï¿½ï¿½GPUÖ®ï¿½ï¿½Ä´ï¿½ï¿½ï¿½
         _particleIndexBuffer = new ComputeBuffer(particleCount, intStride);
         _particleIndexTempBuffer = new ComputeBuffer(particleCount, intStride);
 
@@ -238,12 +238,12 @@ public class ParticleSystem : MonoBehaviour
         _temp2Buffer = new ComputeBuffer(particleCount, intStride);
     }
 
-    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½Ó²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿?
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½Ó²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½?
     void SetupIndirectArgs()
     {
         uint[] args = new uint[5] { 0, 0, 0, 0, 0 };
         args[0] = particleMesh.GetIndexCount(0);    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
-        args[1] = (uint)particleCount;             // Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼Îªï¿½ï¿½ï¿½Öµï¿½ï¿?
+        args[1] = (uint)particleCount;             // Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼Îªï¿½ï¿½ï¿½Öµï¿½ï¿½?
         args[2] = particleMesh.GetIndexStart(0);    // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½
         args[3] = particleMesh.GetBaseVertex(0);    // ï¿½ï¿½×¼ï¿½ï¿½ï¿½ï¿½
         args[4] = 0;                                // ï¿½ï¿½Ê¼Êµï¿½ï¿½ID
@@ -344,13 +344,13 @@ public class ParticleSystem : MonoBehaviour
         int threadGroup2 = Mathf.CeilToInt(threadGroups * 16);    //  16 * 16 = 256     32*16 = 512     64 * 16 = 1024
 
         ///////////////////////////////////////////////////
-        ///         Ö´ÐÐÇ°³õÊ¼Öµ£¨Start£©               ///
+        ///         Ö´ï¿½ï¿½Ç°ï¿½ï¿½Ê¼Öµï¿½ï¿½Startï¿½ï¿½               ///
         ///         ParticlePosition                    ///
         ///         ParticleDensity = 1                 ///
         ///         ParticleIndex = i                   ///
-        ///         Ö´ÐÐÇ°³õÊ¼Öµ£¨Update£©              ///
-        ///         ParticlePosition£¨Calculate£©       ///
-        ///         ParticleDensity £¨Calculate£©       ///
+        ///         Ö´ï¿½ï¿½Ç°ï¿½ï¿½Ê¼Öµï¿½ï¿½Updateï¿½ï¿½              ///
+        ///         ParticlePositionï¿½ï¿½Calculateï¿½ï¿½       ///
+        ///         ParticleDensity ï¿½ï¿½Calculateï¿½ï¿½       ///
         ///         ParticleIndex = i                   ///
         ///////////////////////////////////////////////////
 
@@ -368,8 +368,8 @@ public class ParticleSystem : MonoBehaviour
         computeShader.SetFloat(pressureMultiplierID, pressureMultiplier);
 
 
-        //// ¸ù¾ÝParticleµÄPositionÖµ³õÊ¼»¯HashTableµÄÖµ
-        //computeShader.SetBuffer(calculateHashTableKernelID, particlesID, _particleBuffer);//SetBuffer´ø¿íÏûºÄ¿ÉÒÔºöÂÔ²»¼Æ
+        //// ï¿½ï¿½ï¿½ï¿½Particleï¿½ï¿½PositionÖµï¿½ï¿½Ê¼ï¿½ï¿½HashTableï¿½ï¿½Öµ
+        //computeShader.SetBuffer(calculateHashTableKernelID, particlesID, _particleBuffer);//SetBufferï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½Ôºï¿½ï¿½Ô²ï¿½ï¿½ï¿½
         //computeShader.SetBuffer(calculateHashTableKernelID, hashTableID, _hashTableBuffer);
         //computeShader.Dispatch(calculateHashTableKernelID, threadGroups, 1, 1);
 
@@ -377,11 +377,11 @@ public class ParticleSystem : MonoBehaviour
 
         //for (int i = 1; i <= 3; i++)
         //{
-        //    // ³õÊ¼»¯BlockDataµÄÖµÎª 0
+        //    // ï¿½ï¿½Ê¼ï¿½ï¿½BlockDataï¿½ï¿½ÖµÎª 0
         //    computeShader.SetBuffer(initBlockDataKernelID, blockDataID, _blockDataBuffer);
         //    computeShader.Dispatch(initBlockDataKernelID, threadGroup2, 1, 1);
 
-        //    // ¼ÆËãLocalPrefixSum
+        //    // ï¿½ï¿½ï¿½ï¿½LocalPrefixSum
         //    computeShader.SetInt("_Digit", i - 1);
         //    computeShader.SetBuffer(calculateLocalPrefixSumKernelID, hashTableID, _hashTableBuffer);
         //    computeShader.SetBuffer(calculateLocalPrefixSumKernelID, blockDataID, _blockDataBuffer);
@@ -389,11 +389,11 @@ public class ParticleSystem : MonoBehaviour
         //    computeShader.SetBuffer(calculateLocalPrefixSumKernelID, temp2DataID, _temp2Buffer);
         //    computeShader.Dispatch(calculateLocalPrefixSumKernelID, threadGroups, 1, 1);
 
-        //    // »ñÈ¡BlockDataÊý¾Ý ±ãÓÚDebug
+        //    // ï¿½ï¿½È¡BlockDataï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Debug
         //    //temp2Data = new int[threadGroup2];
         //    //_blockDataBuffer.GetData(temp2Data);
 
-        //    // ¼ÆËãGlobalPrefixSum
+        //    // ï¿½ï¿½ï¿½ï¿½GlobalPrefixSum
         //    computeShader.SetBuffer(calculateGlobalPrefixSumKernelID, blockDataID, _blockDataBuffer);
         //    computeShader.SetBuffer(calculateGlobalPrefixSumKernelID, blockPrefixSumDataID, _blockPrefixSumBuffer);
         //    computeShader.SetBuffer(calculateGlobalPrefixSumKernelID, blockPrefixSumOutputID, _blockPrefixSumOutputBuffer);
@@ -404,7 +404,7 @@ public class ParticleSystem : MonoBehaviour
         //    computeShader.SetBuffer(calculateGlobalPrefixSum2KernelID, blockPrefixSumOutputID, _blockPrefixSumOutputBuffer);
         //    computeShader.Dispatch(calculateGlobalPrefixSum2KernelID, threadGroup2, 1, 1);
 
-        //    // »ñÈ¡´ýÅÅÐòµÄHashÊý¾Ý ÓÃÓÚDebug
+        //    // ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Hashï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Debug
         //    //hashKey = new int[particleCount];
         //    //hash4bitsKey = new int[particleCount];
         //    //_hashTableBuffer.GetData(hashKey);
@@ -415,7 +415,7 @@ public class ParticleSystem : MonoBehaviour
         //    //Debug.Log("Sort hash" + i + ":   " + string.Join(", ", hashKey));
         //    //Debug.Log("Sort 4bits hash" + i + ":   " + string.Join(", ", hash4bitsKey));
 
-        //    // ¼ÆËãGlobalPosition
+        //    // ï¿½ï¿½ï¿½ï¿½GlobalPosition
         //    computeShader.SetBuffer(executeRadixSortKernelID, hashTableID, _hashTableBuffer);
         //    computeShader.SetBuffer(executeRadixSortKernelID, blockDataID, _blockDataBuffer);
         //    computeShader.SetBuffer(executeRadixSortKernelID, localPrefixSumDataID, _localPrefixSumBuffer);
@@ -430,12 +430,12 @@ public class ParticleSystem : MonoBehaviour
         //    //computeShader.SetBuffer(executeRadixSortKernelID, temp2DataID, _temp2Buffer);
         //    computeShader.Dispatch(executeRadixSortKernelID, threadGroups, 1, 1);
 
-        //    // µ÷ÊÔGlobalPositionÊý¾ÝµÄ×¼È·ÐÔ
+        //    // ï¿½ï¿½ï¿½ï¿½GlobalPositionï¿½ï¿½ï¿½Ýµï¿½×¼È·ï¿½ï¿½
         //    //tempData = new int[particleCount];
         //    //_tempBuffer.GetData(tempData);
         //    //DebugSort(tempData, 8192, i);
 
-        //    // ¸ù¾ÝGlobalPositionÖØÓ³Éä
+        //    // ï¿½ï¿½ï¿½ï¿½GlobalPositionï¿½ï¿½Ó³ï¿½ï¿½
         //    computeShader.SetBuffer(changeParticlesIndexKernelID, "_GlobalPosition", _globalPositionBuffer);
         //    computeShader.SetBuffer(changeParticlesIndexKernelID, "_ParticleIndexTemp", _particleIndexTempBuffer);
 
@@ -444,7 +444,7 @@ public class ParticleSystem : MonoBehaviour
         //    computeShader.SetBuffer(changeParticlesIndexKernelID, particleIndexID, _particleIndexBuffer);
         //    computeShader.Dispatch(changeParticlesIndexKernelID, threadGroups, 1, 1);
 
-        //    // µ÷ÊÔÅÅÐòºóµÄHashÖµ
+        //    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½HashÖµ
         //    //hashKey = new int[particleCount];
         //    //_hashTableBuffer.GetData(hashKey);
         //    //for (int j = 0; j < particleCount; j++)
@@ -455,38 +455,38 @@ public class ParticleSystem : MonoBehaviour
         //    //Debug.Log("Sorted 4bits hash" + i + ":   " + string.Join(", ", hash4bitsKey));
         //}
 
-        //// ³õÊ¼»¯Hash±íË÷Òý
+        //// ï¿½ï¿½Ê¼ï¿½ï¿½Hashï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         //computeShader.SetBuffer(initStartAndEndIndexKernelID, cellStartID, _cellStartBuffer);
         //computeShader.SetBuffer(initStartAndEndIndexKernelID, cellEndID, _cellEndBuffer);
         //computeShader.Dispatch(initStartAndEndIndexKernelID, threadGroups, 1, 1);
 
-        //// ¼ÆËãHash±íË÷Òý
+        //// ï¿½ï¿½ï¿½ï¿½Hashï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         //computeShader.SetBuffer(calculateStartAndEndIndexKernelID, hashTableID, _hashTableBuffer);
         //computeShader.SetBuffer(calculateStartAndEndIndexKernelID, cellStartID, _cellStartBuffer);
         //computeShader.SetBuffer(calculateStartAndEndIndexKernelID, cellEndID, _cellEndBuffer);
         //computeShader.Dispatch(calculateStartAndEndIndexKernelID, threadGroups, 1, 1);
 
 
-        // DebugË÷ÒýÖµ
+        // Debugï¿½ï¿½ï¿½ï¿½Öµ
         //cellStartData = new int[particleCount];
         //_cellStartBuffer.GetData(cellStartData);
         //Debug.Log("CellStartBuffer" + ":   " + string.Join(", ", cellStartData));
 
-        //// Debug×îºóµÄHashÖµ
+        //// Debugï¿½ï¿½ï¿½ï¿½HashÖµ
         //hashKey = new int[particleCount];
         //_hashTableBuffer.GetData(hashKey);
         //Debug.Log("Sorted hash: " + string.Join(", ", hashKey));
 
-        //// DebugÅÅÐòºóµÄÁ£×ÓÏÂ±ê
+        //// Debugï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â±ï¿½
         //int[] debugParticleIndexData = new int[particleCount];
         //_particleIndexBuffer.GetData(debugParticleIndexData);
         //Debug.Log("ParticleIndex: " + string.Join(", ", debugParticleIndexData));
 
-        // ¼ÆËãDensity
-        computeShader.SetBuffer(calculateDensityKernelID, particlesID, _particleBuffer);//SetBuffer´ø¿íÏûºÄ¿ÉÒÔºöÂÔ²»¼Æ
+        // ï¿½ï¿½ï¿½ï¿½Density
+        computeShader.SetBuffer(calculateDensityKernelID, particlesID, _particleBuffer);//SetBufferï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½Ôºï¿½ï¿½Ô²ï¿½ï¿½ï¿½
         computeShader.SetBuffer(calculateDensityKernelID, particleIndexID, _particleIndexBuffer);
-        computeShader.SetBuffer(calculateDensityKernelID, densityID, _densityBuffer);//SetBuffer´ø¿íÏûºÄ¿ÉÒÔºöÂÔ²»¼Æ
-        computeShader.SetBuffer(calculateDensityKernelID, predictPositionID, _predictPosBuffer);//SetBuffer´ø¿íÏûºÄ¿ÉÒÔºöÂÔ²»¼Æ
+        computeShader.SetBuffer(calculateDensityKernelID, densityID, _densityBuffer);//SetBufferï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½Ôºï¿½ï¿½Ô²ï¿½ï¿½ï¿½
+        computeShader.SetBuffer(calculateDensityKernelID, predictPositionID, _predictPosBuffer);//SetBufferï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½Ôºï¿½ï¿½Ô²ï¿½ï¿½ï¿½
         computeShader.SetBuffer(calculateDensityKernelID, hashTableID, _hashTableBuffer);
         computeShader.SetBuffer(calculateDensityKernelID, cellStartID, _cellStartBuffer);
         computeShader.SetBuffer(calculateDensityKernelID, cellEndID, _cellEndBuffer);
@@ -496,7 +496,7 @@ public class ParticleSystem : MonoBehaviour
         computeShader.SetFloat("_ThreadGroupCount", threadGroups);
         computeShader.Dispatch(calculateDensityKernelID, threadGroups, 1, 1);
 
-        //// DebugË÷ÒýÖµ
+        //// Debugï¿½ï¿½ï¿½ï¿½Öµ
         //temp1Data = new int[particleCount];
         //_temp1Buffer.GetData(temp1Data);
         //Debug.Log("PositionXInt CellStartIndex" + ":   " + string.Join(", ", temp1Data));
@@ -504,20 +504,20 @@ public class ParticleSystem : MonoBehaviour
         
 
 
-        // ¼ÆËãËÙ¶È
-        computeShader.SetBuffer(calculateVelocityKernelID, particlesID, _particleBuffer);//SetBuffer´ø¿íÏûºÄ¿ÉÒÔºöÂÔ²»¼Æ
-        computeShader.SetBuffer(calculateVelocityKernelID, densityID, _densityBuffer);//SetBuffer´ø¿íÏûºÄ¿ÉÒÔºöÂÔ²»¼Æ
+        // ï¿½ï¿½ï¿½ï¿½ï¿½Ù¶ï¿½
+        computeShader.SetBuffer(calculateVelocityKernelID, particlesID, _particleBuffer);//SetBufferï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½Ôºï¿½ï¿½Ô²ï¿½ï¿½ï¿½
+        computeShader.SetBuffer(calculateVelocityKernelID, densityID, _densityBuffer);//SetBufferï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½Ôºï¿½ï¿½Ô²ï¿½ï¿½ï¿½
         computeShader.SetBuffer(calculateVelocityKernelID, predictPositionID, _predictPosBuffer);
         computeShader.SetBuffer(calculateVelocityKernelID, particleIndexID, _particleIndexBuffer);
         computeShader.SetBuffer(calculateVelocityKernelID, cellStartID, _cellStartBuffer);
         computeShader.SetBuffer(calculateVelocityKernelID, cellEndID, _cellEndBuffer);
         computeShader.Dispatch(calculateVelocityKernelID, threadGroups, 1, 1);
 
-        // ¼ÆËãÎ»ÖÃ
-        computeShader.SetBuffer(calculatePositionKernelID, particlesID, _particleBuffer);//SetBuffer´ø¿íÏûºÄ¿ÉÒÔºöÂÔ²»¼Æ
+        // ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½
+        computeShader.SetBuffer(calculatePositionKernelID, particlesID, _particleBuffer);//SetBufferï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½Ôºï¿½ï¿½Ô²ï¿½ï¿½ï¿½
         computeShader.Dispatch(calculatePositionKernelID, threadGroups, 1, 1);
 
-        // ³õÊ¼»¯Á£×ÓË÷ÒýÖµ
+        // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµ
         computeShader.SetBuffer(initParticleIndexKernelID, particleIndexID, _particleIndexBuffer);
         computeShader.Dispatch(initParticleIndexKernelID, threadGroups, 1, 1);
 
@@ -525,7 +525,7 @@ public class ParticleSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// ï¿½ï¿½Ê¾ï¿½Ú´ï¿½ï¿½ï¿½ï¿?
+    /// ï¿½ï¿½Ê¾ï¿½Ú´ï¿½ï¿½ï¿½ï¿½?
     /// </summary>
     void OnDestroy()
     {
@@ -556,7 +556,7 @@ public class ParticleSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½Çµï¿½ï¿½ï¿½ï¿½Ð?
+    /// ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½Çµï¿½ï¿½ï¿½ï¿½ï¿½?
     /// </summary>
     void OnDrawGizmos()
     {
@@ -565,7 +565,7 @@ public class ParticleSystem : MonoBehaviour
     }
 
     /// <summary>
-    /// ï¿½ï¿½Ê¾ï¿½Ç·ï¿½ï¿½Ö´ï¿½ï¿?
+    /// ï¿½ï¿½Ê¾ï¿½Ç·ï¿½ï¿½Ö´ï¿½ï¿½?
     /// </summary>
     /// <returns></returns>
     bool IsValid()
@@ -600,7 +600,7 @@ public class ParticleSystem : MonoBehaviour
         HashSet<int> seen = new HashSet<int>();
         foreach (int num in array)
         {
-            // ¼ì²éÔªËØÊÇ·ñ >= maxValue »òÒÑ´æÔÚÖØ¸´
+            // ï¿½ï¿½ï¿½Ôªï¿½ï¿½ï¿½Ç·ï¿½ >= maxValue ï¿½ï¿½ï¿½Ñ´ï¿½ï¿½ï¿½ï¿½Ø¸ï¿½
             if (num >= maxValue)
             {
                 return 1;
@@ -636,30 +636,30 @@ public class ParticleSystem : MonoBehaviour
         }
         else
         {
-            Debug.Log(time + " ÓÐÖØ¸´Êý¾Ý.");
-            Debug.Log("Temp Data ÓÐÖØ¸´Êý¾Ý: " + string.Join(", ", tempData));
-            //Debug.Log("HashKey ÓÐÖØ¸´Êý¾Ý: " + string.Join(", ", hashKey));
-            //Debug.Log("BlockPrefixSum ÓÐÖØ¸´Êý¾Ý: " + string.Join(", ", temp1Data));
-            //Debug.Log("LocalPrefixSum ÓÐÖØ¸´Êý¾Ý: " + string.Join(", ", temp2Data));
+            Debug.Log(time + " ï¿½ï¿½ï¿½Ø¸ï¿½ï¿½ï¿½ï¿½ï¿½.");
+            Debug.Log("Temp Data ï¿½ï¿½ï¿½Ø¸ï¿½ï¿½ï¿½ï¿½ï¿½: " + string.Join(", ", tempData));
+            //Debug.Log("HashKey ï¿½ï¿½ï¿½Ø¸ï¿½ï¿½ï¿½ï¿½ï¿½: " + string.Join(", ", hashKey));
+            //Debug.Log("BlockPrefixSum ï¿½ï¿½ï¿½Ø¸ï¿½ï¿½ï¿½ï¿½ï¿½: " + string.Join(", ", temp1Data));
+            //Debug.Log("LocalPrefixSum ï¿½ï¿½ï¿½Ø¸ï¿½ï¿½ï¿½ï¿½ï¿½: " + string.Join(", ", temp2Data));
         }
     }
 
     /// <summary>
-    /// Ëæ»úÔÚmeshÍø¸ñÀïÉú³ÉÁ£×Ó
+    /// ï¿½ï¿½ï¿½ï¿½ï¿½meshï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     /// </summary>
 
     void DistributeInVolumeRandom(Particle[] particles, Mesh mesh, int particleCount)
     {
-        // 1. ÁÙÊ±´´½¨ MeshCollider
+        // 1. ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ MeshCollider
         GameObject tempObj = new GameObject("TempCollider");
         MeshCollider tempCollider = tempObj.AddComponent<MeshCollider>();
         tempCollider.sharedMesh = mesh;
         tempCollider.convex = false;
 
-        // 2. Ô¤¼ÆËãÓÐÐ§Î»ÖÃ
+        // 2. Ô¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð§Î»ï¿½ï¿½
         Bounds bounds = mesh.bounds;
         List<Vector3> validPositions = new List<Vector3>();
-        int preSamples = particleCount; // Ô¤²ÉÑùÊýÁ¿£¬¿É¸ù¾ÝÐèÒªµ÷Õû
+        int preSamples = particleCount; // Ô¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É¸ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½
 
         for (int i = 0; i < preSamples; i++)
         {
@@ -672,25 +672,25 @@ public class ParticleSystem : MonoBehaviour
                 validPositions.Add(pos);
         }
 
-        // 3. ·ÖÅäÁ£×Ó
+        // 3. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         for (int i = 0; i < Mathf.Min(particleCount, validPositions.Count); i++)
         {
             particles[i].position = validPositions[Random.Range(0, validPositions.Count)];
         }
 
-        // 4. ÇåÀíÁÙÊ±¶ÔÏó
+        // 4. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½
         GameObject.Destroy(tempObj);
     }
 
     void DistributeInVolume(Particle[] particles, Mesh mesh, int particleCount)
     {
-        // 1. ÁÙÊ±´´½¨ MeshCollider
+        // 1. ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ MeshCollider
         GameObject tempObj = new GameObject("TempCollider");
         MeshCollider tempCollider = tempObj.AddComponent<MeshCollider>();
         tempCollider.sharedMesh = mesh;
-        tempCollider.convex = false; // ±ØÐëÉèÎª false£¡
+        tempCollider.convex = false; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îª falseï¿½ï¿½
 
-        // 2. ¼ì²é Mesh Êý¾ÝÊÇ·ñÓÐÐ§
+        // 2. ï¿½ï¿½ï¿½ Mesh ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½Ð§
         if (mesh.vertexCount == 0)
         {
             Debug.LogError("Mesh has no vertices!");
@@ -698,13 +698,13 @@ public class ParticleSystem : MonoBehaviour
             return;
         }
 
-        // 3. ÌåËØ»¯²ÎÊý
+        // 3. ï¿½ï¿½ï¿½Ø»ï¿½ï¿½ï¿½ï¿½ï¿½
         Bounds bounds = mesh.bounds;
-        Debug.Log($"Mesh bounds: {bounds}"); // È·ÈÏ°üÎ§ºÐÊÇ·ñºÏÀí
+        Debug.Log($"Mesh bounds: {bounds}"); // È·ï¿½Ï°ï¿½Î§ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½
         int gridResolution = 30;
         Vector3 voxelSize = bounds.size / gridResolution;
 
-        // 4. ¼ì²âÓÐÐ§ÌåËØ
+        // 4. ï¿½ï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½ï¿½ï¿½
         bool[,,] voxelGrid = new bool[gridResolution, gridResolution, gridResolution];
         for (int x = 0; x < gridResolution; x++)
         {
@@ -722,7 +722,7 @@ public class ParticleSystem : MonoBehaviour
             }
         }
 
-        // 5. ÊÕ¼¯ÓÐÐ§Î»ÖÃ
+        // 5. ï¿½Õ¼ï¿½ï¿½ï¿½Ð§Î»ï¿½ï¿½
         List<Vector3> validPositions = new List<Vector3>();
         for (int x = 0; x < gridResolution; x++)
         {
@@ -745,7 +745,7 @@ public class ParticleSystem : MonoBehaviour
 
         Debug.Log($"Valid positions: {validPositions.Count}");
 
-        // 6. ·ÖÅäÁ£×Ó£¨Èç¹û validPositions ÈÔÎª¿Õ£¬ÔòÊ¹ÓÃ°üÎ§ºÐËæ»ú·Ö²¼£©
+        // 6. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó£ï¿½ï¿½ï¿½ï¿½ validPositions ï¿½ï¿½Îªï¿½Õ£ï¿½ï¿½ï¿½Ê¹ï¿½Ã°ï¿½Î§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö²ï¿½ï¿½ï¿½
         if (validPositions.Count == 0)
         {
             Debug.LogWarning("No valid positions found! Falling back to bounding box.");
@@ -766,24 +766,24 @@ public class ParticleSystem : MonoBehaviour
             }
         }
 
-        // 7. Ïú»ÙÁÙÊ±¶ÔÏó
+        // 7. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½
         GameObject.Destroy(tempObj);
     }
 
     bool IsPointInMesh(Vector3 point, MeshCollider collider)
     {
-        // 1. ¿ìËÙÅÅ³ý£º¼ì²éÊÇ·ñÔÚ°üÎ§ºÐÄÚ
+        // 1. ï¿½ï¿½ï¿½ï¿½ï¿½Å³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½Ú°ï¿½Î§ï¿½ï¿½ï¿½ï¿½
         if (!collider.bounds.Contains(point))
             return false;
 
-        // 2. ´Ó¸ß´¦ÏòÏÂ·¢ÉäÉäÏß
+        // 2. ï¿½Ó¸ß´ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         Vector3 rayStart = point + Vector3.up * 1000f;
         Ray ray = new Ray(rayStart, Vector3.down);
 
-        // 3. ¼ì²âÉäÏßÊÇ·ñÓëÄ£ÐÍÏà½»
+        // 3. ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½Ä£ï¿½ï¿½ï¿½à½»
         if (collider.Raycast(ray, out RaycastHit hit, Mathf.Infinity))
         {
-            // 4. Í³¼Æ½»µãÊýÁ¿£¨ÆæÊý=ÄÚ²¿£¬Å¼Êý=Íâ²¿£©
+            // 4. Í³ï¿½Æ½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½=ï¿½Ú²ï¿½ï¿½ï¿½Å¼ï¿½ï¿½=ï¿½â²¿ï¿½ï¿½
             RaycastHit[] hits = Physics.RaycastAll(ray, Mathf.Infinity);
             int hitCount = Physics.RaycastAll(ray, Mathf.Infinity).Length;
             return hitCount % 2 == 1;
