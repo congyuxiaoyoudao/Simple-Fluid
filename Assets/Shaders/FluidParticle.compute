@@ -1,8 +1,20 @@
+#pragma kernel CalculateHashTable
 #pragma kernel CalculateDensity
 #pragma kernel CalculateVelocity
 #pragma kernel CalculatePosition
+#pragma kernel CalculateLocalPrefixSum
+#pragma kernel CalculateGlobalPrefixSum
+#pragma kernel CalculateGlobalPrefixSum2
+#pragma kernel ExecuteRadixSort
+#pragma kernel ChangeParticlesIndex
+#pragma kernel InitStartAndEndIndex
+#pragma kernel InitParticleIndex
+#pragma kernel InitBlockData
+#pragma kernel CalculateStartAndEndIndex
+#pragma kernel ResetBlockData
 
 //#include "UnityCG.cginc"
+#define THREAD_NUM_X 64
 
 struct Particle
 {
@@ -10,10 +22,14 @@ struct Particle
     float3 velocity;
 };
 
-
+// imformation of threads
+int _ThreadGroupCount;
 // imformation of particles
+RWStructuredBuffer<int> _ParticleIndex;
+RWStructuredBuffer<int> _ParticleIndexTemp;
 RWStructuredBuffer<Particle> _Particles;
 float _ParticleMass;
+float _ParticleSize;
 float _ParticleCount;
 float _ParticleRadius;
 float _Gravity;
@@ -32,6 +48,47 @@ float3 _AreaSize;
 float _DeltaTime;
 // hash table
 RWStructuredBuffer<int> _HashTable;
+RWStructuredBuffer<int> _HashTableTemp;
+// blockData
+RWStructuredBuffer<int> _BlockData;
+RWStructuredBuffer<int> _LocalPrefixSumData;
+RWStructuredBuffer<int> _BlockPrefixSumData;
+RWStructuredBuffer<int> _BlockPrefixSumOutput;
+
+RWStructuredBuffer<int> _GlobalPosition;
+
+RWStructuredBuffer<int> _CellStart;
+RWStructuredBuffer<int> _CellEnd;
+
+
+// temp data
+RWStructuredBuffer<int> _TempData;
+RWStructuredBuffer<int> _Temp1Data;
+RWStructuredBuffer<int> _Temp2Data;
+
+// groupshared data
+groupshared int localData[THREAD_NUM_X];
+groupshared int localMask[THREAD_NUM_X];
+groupshared int localPrefixSum[THREAD_NUM_X];
+
+// for searching
+static const int3 cellCoordOffset[27] =
+{
+    // x=-1
+    int3(-1, -1, -1), int3(-1, -1, 0), int3(-1, -1, 1),
+    int3(-1, 0, -1), int3(-1, 0, 0), int3(-1, 0, 1),
+    int3(-1, 1, -1), int3(-1, 1, 0), int3(-1, 1, 1),
+
+    // x=0
+    int3(0, -1, -1), int3(0, -1, 0), int3(0, -1, 1),
+    int3(0, 0, -1), int3(0, 0, 0), int3(0, 0, 1),
+    int3(0, 1, -1), int3(0, 1, 0), int3(0, 1, 1),
+
+    // x=1
+    int3(1, -1, -1), int3(1, -1, 0), int3(1, -1, 1),
+    int3(1, 0, -1), int3(1, 0, 0), int3(1, 0, 1),
+    int3(1, 1, -1), int3(1, 1, 0), int3(1, 1, 1)
+};
 
 
 #define PI 3.14159
@@ -62,19 +119,30 @@ static float Pow9(float value)
     return value * value * value * value * value * value * value * value * value;
 }
 
+int get4Bits(int value, int iteration)
+{
+    int shift = iteration * 4;
+    return (value >> shift) & 0xF;
+}
+
 // Rand Function
 float rand(float2 seed)
 {
     return frac(sin(dot(seed, float2(12.9898, 78.233))) * 43758.5453);
 }
 
-// Hash
-static float3 PositionToCellCoord(float3 position)
+float sdSphere(float3 p, float s)
 {
-    return float3(floor((position - _AreaCenter + _AreaSize) / 1.1 * _ParticleRadius));
+    return length(p) - s;
 }
 
-static int CellCoordToCellHash(float3 cellCoord)
+// Hash
+static int3 PositionToCellCoord(float3 position)
+{
+    return int3(floor((position - _AreaCenter + _AreaSize) / 1.01 * _ParticleRadius));
+}
+
+static int CellCoordToCellHash(int3 cellCoord)
 {
     const int p1 = 73856093;
     const int p2 = 19349663;
@@ -85,97 +153,164 @@ static int CellCoordToCellHash(float3 cellCoord)
 // TODO: Solve the hash collision
 static int CellHashToHashKey(int cellHash)
 {
-    return cellHash % 8191;
+    return cellHash % 7999;
 }
+
+
 static int CalculateHashKey(float3 position)
 {
     return CellHashToHashKey(CellCoordToCellHash(PositionToCellCoord(position)));
 }
 
+// Calculate X-Mask
+void CalculateMask(int GI,int maskNum)
+{
+    if (localData[GI] == maskNum)
+        localMask[GI] = 1;
+    else
+        localMask[GI] = 0;
+    GroupMemoryBarrierWithGroupSync();
+}
+
+// Parallax Calculate Local Prefix Sum What can i say
+void CalculateMaskPrefixSum(int GI)
+{
+    // from bottom to the top
+    int d = 0;
+    int i = 0;
+    int offset = 1;
+    int totalNum = 64;
+    [unroll]
+    for (d = totalNum >> 1; d > 0; d >>= 1)
+    {
+        GroupMemoryBarrierWithGroupSync();
+        if (GI < d)
+        {
+            uint ai = offset * (2 * GI + 1) - 1;
+            uint bi = offset * (2 * GI + 2) - 1;
+
+            localMask[bi] += localMask[ai];
+        }
+        offset *= 2;
+    }
+    GroupMemoryBarrierWithGroupSync();
+    // clear last num
+    if (GI == 0)
+    {
+        localMask[totalNum - 1] = 0;
+    }
+    GroupMemoryBarrierWithGroupSync();
+    for (d = 1; d < totalNum; d *= 2)
+    {
+        offset >>= 1;
+        GroupMemoryBarrierWithGroupSync();
+
+        if (GI < d)
+        {
+            uint ai = offset * (2 * GI + 1) - 1;
+            uint bi = offset * (2 * GI + 2) - 1;
+
+            uint tmp = localMask[ai];
+            localMask[ai] = localMask[bi];
+            localMask[bi] += tmp;
+        }
+    }
+    GroupMemoryBarrierWithGroupSync();
+}
+
+// Parallax Calculate Local Prefix Sum What can i say
+void CalculateLocalPrefixSum(int GI)
+{
+    // from bottom to the top
+    int d = 0;
+    int i = 0;
+    int offset = 1;
+    int totalNum = THREAD_NUM_X;
+    [unroll]
+    for (d = totalNum >> 1; d > 0; d >>= 1)
+    {
+        GroupMemoryBarrierWithGroupSync();
+        if (GI < d)
+        {
+            uint ai = offset * (2 * GI + 1) - 1;
+            uint bi = offset * (2 * GI + 2) - 1;
+
+            localPrefixSum[bi] += localPrefixSum[ai];
+        }
+        offset *= 2;
+    }
+    GroupMemoryBarrierWithGroupSync();
+    // clear last num
+    if (GI == 0)
+    {
+        localPrefixSum[totalNum - 1] = 0;
+    }
+    GroupMemoryBarrierWithGroupSync();
+    for (d = 1; d < totalNum; d *= 2)
+    {
+        offset >>= 1;
+        GroupMemoryBarrierWithGroupSync();
+
+        if (GI < d)
+        {
+            uint ai = offset * (2 * GI + 1) - 1;
+            uint bi = offset * (2 * GI + 2) - 1;
+
+            uint tmp = localPrefixSum[ai];
+            localPrefixSum[ai] = localPrefixSum[bi];
+            localPrefixSum[bi] += tmp;
+        }
+    }
+    GroupMemoryBarrierWithGroupSync();
+}
+
+// Put The X-PrefixSum To LocalPrefixSum
+void CalculateLocalPrefixSum(int GI,int mask)
+{
+    if (localData[GI] == mask)
+        localPrefixSum[GI] = localMask[GI];
+    GroupMemoryBarrierWithGroupSync();
+}
 
 // DistributionFunctionKernel
-static float ViscositySmoothingKernel(float dst, float radius)
-{
-    float volumn = PI * Pow8(radius) / 4;
-    float value = max(0, radius * radius - dst * dst);
-    return value * value * value / volumn;
-}
-
-static float FunctionKernel3D(float dst, float radius)
-{
-    float volumn = PI * Pow6(radius) / 15;
-    float value = max(0, radius - dst);
-    return value * value * value / volumn;
-}
-
-static float FunctionKernelDerivative3D(float dst, float radius)
-{
-    // TODO;
-    if (dst > radius)
-        return 0;
-    float f = radius - dst;
-    float scale = -45 / (PI * Pow6(radius));
-    return scale * dst * f * f;
-}
-
-static float Function2(float dst, float radius)
+static float SmoothingKernel(float dst, float radius)
 {
     float volumn = 64 * PI * Pow9(radius) / 315;
     float value = max(0, radius * radius - dst * dst);
     return value * value * value / volumn;
 }
 
-static float FunctionDerivative2(float dst, float radius)
+static float SharpingKernel(float dst, float radius)
 {
-    // TODO;
-    if (dst > radius)
-        return 0;
-    if(dst<0.5)
-        return -100;
-    float f = radius * radius - dst * dst;
-    float scale = -945 / (32 * PI * Pow9(radius));
-    return scale * dst * f * f;
-}
-
-static float SmoothingKernel2D(float dst, float radius)
-{
-    float volumn = PI * Pow8(radius) / 4;
-    float value = max(0, radius * radius - dst * dst);
-    return value * value * value / volumn;
-}
-
-static float SharpingKernel2D(float dst, float radius)
-{
-    float volumn = PI * Pow4(radius) / 2;
+    float volumn = PI * Pow6(radius) / 15;
     float value = max(0, radius - dst);
     return value * value * value / volumn;
 }
 
-static float SmoothingKernelDerivative2D(float dst, float radius)
+static float SharpingKernelDerivative(float dst, float radius)
 {
-    if (dst > radius)
-        return 0;
-    if (dst < 0.1)
-        return -10;
-    float f = radius * radius - dst * dst;
-    float scale = -24 / (PI * Pow8(radius));
-    return scale * dst * f * f;
-}
-
-static float SharpingKernelDerivative2D(float dst, float radius)
-{
+    // TODO;
     if (dst > radius)
         return 0;
     float f = radius - dst;
-    float scale = -6 / (PI * Pow4(radius));
+    float scale = -45 / (PI * Pow6(radius));
     return scale * f * f;
+}
+
+static float ViscosityKernel(float dst, float radius)
+{
+    if(dst>radius)
+        return 0;
+    float volumn = PI * Pow6(radius) / 45;
+    float value = radius - dst;
+    return value / volumn;
 }
 
 static float ConvertDensityToPressure(float density)
 {
+    // simple calculate method 1
     float densityError = density - _TargetDensity;
     float pressure = densityError * _PressureMultiplier;
-    //float pressure = max(0, densityError) * _PressureMultiplier;
     return pressure;
 }
 
@@ -186,25 +321,36 @@ static float CalculateDensity3D(float3 position)
     for (int i = 0; i < _ParticleCount; i++)
     {
         float dst = length(_Particles[i].position - position);
-        float influence = FunctionKernel3D(dst, _ParticleRadius);
+        float influence = SmoothingKernel(dst, _ParticleRadius);
         density += mass * influence;
     }
     return density;
 }
 
-float CalculateDensity2D(float3 position)
+float CalculateDensity3DWithAcceleration(float3 position)
 {
+    int3 centerCellCoord = PositionToCellCoord(position);
     float density = 0;
     float mass = _ParticleMass;
-    for (int i = 0; i < _ParticleCount; i++)
+    [unroll]
+    for (int i = 0; i < 27; i++)
     {
-        float dst = length(_Particles[i].position - position);
-        float influence = SharpingKernel2D(dst, _ParticleRadius);
-        density += mass * influence;
+        int key = CellHashToHashKey(CellCoordToCellHash(centerCellCoord + cellCoordOffset[i]));
+        int cellStartIndex = _CellStart[key];
+        int cellEndIndex = _CellEnd[key];
+
+        for (int j = cellStartIndex; j < cellEndIndex; j++)
+        {
+            float dst = length(_Particles[_ParticleIndex[j]].position - position);
+            //if (dst < 0.001f)
+            //    continue;
+            float influence = SmoothingKernel(dst, _ParticleRadius);
+            density += mass * influence;
+        }
     }
     return density;
 }
-
+// just for understand
 static float CalculateProperty(float3 position)
 {
     float property = 0;
@@ -226,30 +372,38 @@ static float CalculateSharedPressure(float densityA, float densityB)
     return (pressureA + pressureB) / 2;
 }
 
-static float3 CalculatePressureForce2D(int particleIndex)
+static float3 CalculatePressureForceWithAcceleration(int particleIndex,float particleDensity)
 {
+    float3 predictionPosition = _PredictPosition[particleIndex];
+    int3 centerCellCoord = PositionToCellCoord(predictionPosition);
     float3 pressureForce = float3(0.0, 0.0, 0.0);
     float mass = _ParticleMass;
-    for (int otherParticleIndex = 0; otherParticleIndex < _ParticleCount; otherParticleIndex++)
+    
+    for (int i = 0; i < 27; i++)
     {
-        if (particleIndex == otherParticleIndex) continue;
+        int key = CellHashToHashKey(CellCoordToCellHash(centerCellCoord + cellCoordOffset[i]));
+        int cellStartIndex = _CellStart[key];
+        int cellEndIndex = _CellEnd[key];
+
+        for (int j = cellStartIndex; j < cellEndIndex; j++)
+        {
+            if (particleIndex == _ParticleIndex[j])
+                continue;
+            
+            float3 offset = _Particles[_ParticleIndex[j]].position - predictionPosition;
+            float dst = length(offset);
         
-        //float3 offset = _Particles[otherParticleIndex].position - _Particles[particleIndex].position;
-        float3 offset = _Particles[otherParticleIndex].position - _PredictPosition[particleIndex];
-        float dst = length(offset);
-        
-        float3 dir = dst == 0 ? float3(1, 0, 0) : offset / dst;
-        float slope = SharpingKernelDerivative2D(dst, _ParticleRadius);
-        float density = _Density[otherParticleIndex];
-        float sharedPressure = CalculateSharedPressure(density,_Density[particleIndex]);
-        pressureForce += sharedPressure * dir * mass * slope / density;
-        //pressureForce += ConvertDensityToPressure(density) * dir * mass * slope / density;
-        //pressureForce += slope * dir/10;
+            float3 dir = dst == 0 ? float3(1, 0, 0) : offset / dst;
+            float slope = SharpingKernelDerivative(dst, _ParticleRadius);
+            float density = _Density[j];
+            float sharedPressure = CalculateSharedPressure(density, particleDensity);
+            pressureForce += sharedPressure * dir * mass * slope / density;
+        }
     }
     return pressureForce;
 }
 
-static float3 CalculatePressureForce3D(int particleIndex)
+static float3 CalculatePressureForce(int particleIndex)
 {
     float3 pressureForce = float3(0.0, 0.0, 0.0);
     float mass = _ParticleMass;
@@ -261,8 +415,8 @@ static float3 CalculatePressureForce3D(int particleIndex)
         float3 offset = _Particles[otherParticleIndex].position - _Particles[particleIndex].position;
         float dst = length(offset);
         
-        float3 dir = dst == 0 ? float3(1,0,0) : offset / dst;
-        float slope = FunctionKernelDerivative3D(dst, _ParticleRadius);
+        float3 dir = dst< 0.001f ? float3(0,1,0) : offset / dst;
+        float slope = SharpingKernelDerivative(dst, _ParticleRadius);
         float density = _Density[otherParticleIndex];
         float sharedPressure = CalculateSharedPressure(density, _Density[particleIndex]);
         pressureForce += sharedPressure * dir * mass * slope / density;
@@ -279,25 +433,68 @@ static float3 CalculateViscosityForce(int particleIndex)
     float3 position = p.position;
     for (int i = 0; i < _ParticleCount; i++)
     {
+        if (particleIndex == i)
+            continue;
         Particle otherParticle = _Particles[i];
         float dst = length(otherParticle.position - position);
-        float influence = ViscositySmoothingKernel(dst, _ParticleRadius);
+        float influence = ViscosityKernel(dst, _ParticleRadius);
+        
         viscosityForce -= (p.velocity - otherParticle.velocity) * influence;
-
     }
     return viscosityForce * _ViscosityStrength;
 }
 
+static float3 CalculateViscosityForceWithAcceleration(int particleIndex)
+{
+    Particle p = _Particles[particleIndex];
+    int3 centerCellCoord = PositionToCellCoord(p.position);
+    float3 viscosityForce = float3(0.0, 0.0, 0.0);
+    float3 position = p.position;
+    for (int i = 0; i < 27; i++)
+    {
+        int key = CellHashToHashKey(CellCoordToCellHash(centerCellCoord + cellCoordOffset[i]));
+        int cellStartIndex = _CellStart[key];
+        int cellEndIndex = _CellEnd[key];
+
+        for (int j = cellStartIndex; j < cellEndIndex; j++)
+        {
+            Particle otherParticle = _Particles[j];
+            float dst = length(otherParticle.position - position);
+            float influence = ViscosityKernel(dst, _ParticleRadius);
+            viscosityForce -= (p.velocity - otherParticle.velocity) * influence;
+        }
+    }
+    return viscosityForce * _ViscosityStrength;
+}
+
+/////////////////////////////////////////////////////////////////////
+//                      Kernels                                    //
+//                      Kernels                                    //
+//                      Kernels                                    //
+//                      Kernels                                    //
+//                      Kernels                                    //
+/////////////////////////////////////////////////////////////////////
+
+
+[numthreads(64, 1, 1)]
+void CalculateHashTable(uint3 id : SV_DispatchThreadID)
+{
+    Particle p = _Particles[id.x];
+    //float3 predictPosition = p.position + p.velocity * 1 / 120.0f;
+    _HashTable[id.x] = CalculateHashKey(p.position);
+}
 
 [numthreads(64, 1, 1)]
 void CalculateDensity(uint3 id : SV_DispatchThreadID)
 {
     Particle p = _Particles[id.x];
-    //float3 predictPosition = p.position + p.velocity * _DeltaTime;
-    _PredictPosition[id.x] = p.position + p.velocity * 1 / 120.0f;
-    _Density[id.x] = CalculateDensity2D(_PredictPosition[id.x]);
-    _HashTable[id.x] = CalculateHashKey(p.position);
-    //_Density[id.x] = CalculateDensity2D(p.position);
+
+    float3 predictionPosition = p.position + p.velocity * 1 / 120.0f;
+    _PredictPosition[id.x] = predictionPosition;
+    //_Density[id.x] = CalculateDensity3D(_PredictPosition[id.x]);
+    _Density[id.x] = CalculateDensity3D(p.position);
+    //_Density[id.x] = CalculateDensity3DWithAcceleration(predictionPosition);
+    //_Temp1Data[id.x] = _CellStart[CalculateHashKey(predictionPosition)];
 }
 
 
@@ -306,11 +503,14 @@ void CalculateVelocity(uint3 id : SV_DispatchThreadID)
 {
     Particle p = _Particles[id.x];
     
+    float density = _Density[id.x];
     // calVelocity
-    float3 pressureForce = CalculatePressureForce2D(id.x);
-    float3 pressureAcceleration = pressureForce / _Density[id.x];
+    float3 pressureForce = CalculatePressureForce(id.x);
+    //float3 pressureForce = CalculatePressureForceWithAcceleration(id.x,density);
+    float3 pressureAcceleration = pressureForce / density;
     float3 viscosityForce = CalculateViscosityForce(id.x);
-    float3 viscosityAcceleration = viscosityForce / _Density[id.x];
+    //float3 viscosityForce = CalculateViscosityForceWithAcceleration(id.x);
+    float3 viscosityAcceleration = viscosityForce / density;
     
     p.velocity.y -= _Gravity * _DeltaTime;
     p.velocity += pressureAcceleration * _DeltaTime;
@@ -327,6 +527,7 @@ void CalculatePosition(uint3 id:SV_DispatchThreadID)
     Particle p = _Particles[id.x];
     p.position += p.velocity * _DeltaTime;
     //p.position.y = _Density[id.x];
+        
     
     float3 minBound = _AreaCenter - _AreaSize;
     float3 maxBound = _AreaCenter + _AreaSize;
@@ -338,7 +539,6 @@ void CalculatePosition(uint3 id:SV_DispatchThreadID)
         p.position.x = clamp(p.position.x, minBound.x, maxBound.x);
         
     }
-    
     if (p.position.y < minBound.y || p.position.y > maxBound.y)
     {
         p.velocity.y *= -0.8;
@@ -353,3 +553,174 @@ void CalculatePosition(uint3 id:SV_DispatchThreadID)
     }
     _Particles[id.x] = p;
 }
+
+
+[numthreads(THREAD_NUM_X, 1, 1)]
+void InitBlockData(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x < _ThreadGroupCount * 16)
+        _BlockData[id.x] = 0;
+}
+
+int _Digit;
+
+[numthreads(THREAD_NUM_X,1,1)]
+void CalculateLocalPrefixSum(uint3 id : SV_DispatchThreadID,uint GI:SV_GroupIndex,uint3 Gid:SV_GroupID)
+{
+    localData[GI] = get4Bits(_HashTable[id.x], _Digit);
+    [unroll]
+    for (int t = 0; t < 16; t++)
+    {
+        CalculateMask(GI.x, t);
+        CalculateMaskPrefixSum(GI.x);
+        if (GI == THREAD_NUM_X-1)
+        {
+            if (localData[GI] == t)
+            {
+                _BlockData[t * _ThreadGroupCount + Gid.x]++;
+            }
+            _BlockData[t * _ThreadGroupCount + Gid.x] += localMask[GI.x];
+        }
+        CalculateLocalPrefixSum(GI.x, t);
+    }
+    
+    _LocalPrefixSumData[id.x] = localPrefixSum[GI.x];
+}
+
+
+
+[numthreads(THREAD_NUM_X, 1, 1)]
+void CalculateGlobalPrefixSum(uint3 id : SV_DispatchThreadID, uint GI : SV_GroupIndex, uint3 Gid : SV_GroupID)
+{
+    //load date to shared memort
+    if (id.x < _ThreadGroupCount * 16)
+    {
+        localPrefixSum[GI.x] = _BlockData[id.x];
+    }
+    else
+    {
+        localPrefixSum[GI.x] = 0;
+    }
+    GroupMemoryBarrierWithGroupSync();
+    
+    //calc counter prefix sum
+    CalculateLocalPrefixSum(GI);
+    
+    _BlockPrefixSumData[id.x] = localPrefixSum[GI];
+}
+
+
+[numthreads(THREAD_NUM_X, 1, 1)]
+void CalculateGlobalPrefixSum2(uint3 id : SV_DispatchThreadID, uint GI : SV_GroupIndex, uint3 Gid : SV_GroupID)
+{
+    
+    if (Gid.x > 0)
+    {
+        //get pred sum
+        int sum = 0;
+        for (int i = 0; i < Gid.x; ++i)
+        {
+            sum += _BlockPrefixSumData[(i + 1) * THREAD_NUM_X - 1] + _BlockData[(i + 1) * THREAD_NUM_X - 1];
+        }
+        if (id.x < _ThreadGroupCount * 16)
+        {
+            _BlockPrefixSumOutput[id.x] = sum + _BlockPrefixSumData[id.x];
+        }
+    }
+    else
+    {
+        _BlockPrefixSumOutput[id.x] = _BlockPrefixSumData[id.x];
+    }
+}
+
+[numthreads(THREAD_NUM_X, 1, 1)]
+void ExecuteRadixSort(uint3 id : SV_DispatchThreadID, uint GI : SV_GroupIndex, uint3 Gid : SV_GroupID)
+{
+    // use local mask array to store data
+    _ParticleIndexTemp[id.x] = _ParticleIndex[id.x];
+    _HashTableTemp[id.x] = _HashTable[id.x];
+    
+    int sortData = get4Bits(_HashTable[id.x], _Digit);
+
+    int globalPosition = _BlockPrefixSumData[sortData * _ThreadGroupCount + Gid.x] + _LocalPrefixSumData[id.x];
+    
+    // For Debug
+    //_TempData[id.x] = globalPosition;
+    //_Temp2Data[id.x] = _LocalPrefixSumData[id.x];
+    
+    _GlobalPosition[id.x] = globalPosition;
+}
+
+
+[numthreads(THREAD_NUM_X,1,1)]
+void ChangeParticlesIndex(uint3 id:SV_DispatchThreadID)
+{
+    int globalPosition = _GlobalPosition[id.x];
+    _HashTable[globalPosition] = _HashTableTemp[id.x];
+    _ParticleIndex[globalPosition] = _ParticleIndexTemp[id.x];
+}
+
+[numthreads(THREAD_NUM_X, 1, 1)]
+void InitStartAndEndIndex(uint3 DTid : SV_DispatchThreadID)
+{
+    _CellStart[DTid.x] = _ParticleCount;
+    _CellEnd[DTid.x] = -1;
+}
+
+groupshared int sharedHash[64 + 1];
+
+[numthreads(THREAD_NUM_X, 1, 1)]
+void CalculateStartAndEndIndex(uint3 DTid : SV_DispatchThreadID, uint GI : SV_GroupIndex)
+{
+    //AllMemoryBarrierWithGroupSync();
+    int hashValue = 0;
+    if (DTid.x < _ParticleCount)
+    {
+        hashValue = _HashTable[DTid.x];
+        sharedHash[GI + 1] = hashValue;
+
+        if (GI == 0 && DTid.x > 0)
+        {
+            sharedHash[0] = _HashTable[DTid.x - 1];
+        }
+    }
+
+    GroupMemoryBarrierWithGroupSync();
+
+    if (DTid.x < _ParticleCount)
+    {
+        //If It's equal to the last one
+        if (DTid.x == 0 || hashValue != sharedHash[GI])
+        {
+            _CellStart[hashValue] = DTid.x;
+            if (DTid.x > 0)
+            {
+                //the last cell end pos
+                _CellEnd[sharedHash[GI]] = DTid.x;
+            }
+        }
+        //thread the last one output
+        if (DTid.x == _ParticleCount - 1)
+        {
+            _CellEnd[hashValue] = DTid.x + 1;
+        }
+    }
+}
+
+
+[numthreads(THREAD_NUM_X, 1, 1)]
+void ResetBlockData(uint DTid:SV_DispatchThreadID)
+{
+    _BlockData[DTid.x] = 0;
+}
+
+
+[numthreads(THREAD_NUM_X, 1, 1)]
+void InitParticleIndex(uint DTid : SV_DispatchThreadID)
+{
+    if (DTid.x < _ParticleCount)
+    {
+        _ParticleIndex[DTid.x] = DTid.x;
+    }
+}
+

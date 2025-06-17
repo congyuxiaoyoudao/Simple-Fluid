@@ -1,0 +1,298 @@
+#pragma kernel ExecuteRadixSort
+#pragma kernel CalculateGlobalPrefixSum
+#pragma kernel SortData
+#pragma kernel CalculateStartAndEndIndex
+
+
+
+int _ThreadGroupCount;
+
+float _ParticleCount;
+
+// hash table
+RWStructuredBuffer<int> _HashTable;
+// blockData
+RWStructuredBuffer<int> _BlockData;
+RWStructuredBuffer<int> _DebugData;
+RWStructuredBuffer<int> _BlockPrefixSumData;
+RWStructuredBuffer<int> _SortData;
+
+RWStructuredBuffer<int> _CellStart;
+RWStructuredBuffer<int> _CellEnd;
+
+groupshared int localData[64];
+groupshared int localMask[64];
+groupshared int localPrefixSum[64];
+
+
+int get4Bits(int value, int iteration)
+{
+    int shift = iteration * 4;
+    return (value >> shift) & 0xF;
+}
+
+
+
+// PrefixSum
+void CalculateMask(int GI, int maskNum)
+{
+    if (localData[GI] == maskNum)
+        localMask[GI] = 1;
+    else
+        localMask[GI] = 0;
+    GroupMemoryBarrierWithGroupSync();
+}
+
+void CalculateMaskPrefixSum(int GI)
+{
+    // from bottom to the top
+    int d = 0;
+    int i = 0;
+    int offset = 1;
+    int totalNum = 64;
+    [unroll]
+    for (d = totalNum >> 1; d > 0; d >>= 1)
+    {
+        GroupMemoryBarrierWithGroupSync();
+        if (GI < d)
+        {
+            uint ai = offset * (2 * GI + 1) - 1;
+            uint bi = offset * (2 * GI + 2) - 1;
+
+            localMask[bi] += localMask[ai];
+        }
+        offset *= 2;
+    }
+    GroupMemoryBarrierWithGroupSync();
+    // clear last num
+    if (GI == 0)
+    {
+        localMask[totalNum - 1] = 0;
+    }
+    GroupMemoryBarrierWithGroupSync();
+    for (d = 1; d < totalNum; d *= 2)
+    {
+        offset >>= 1;
+        GroupMemoryBarrierWithGroupSync();
+
+        if (GI < d)
+        {
+            uint ai = offset * (2 * GI + 1) - 1;
+            uint bi = offset * (2 * GI + 2) - 1;
+
+            uint tmp = localMask[ai];
+            localMask[ai] = localMask[bi];
+            localMask[bi] += tmp;
+        }
+    }
+    GroupMemoryBarrierWithGroupSync();
+}
+
+void CalculateLocalPrefixSum(int GI)
+{
+    // from bottom to the top
+    int d = 0;
+    int i = 0;
+    int offset = 1;
+    int totalNum = 64;
+    [unroll]
+    for (d = totalNum >> 1; d > 0; d >>= 1)
+    {
+        GroupMemoryBarrierWithGroupSync();
+        if (GI < d)
+        {
+            uint ai = offset * (2 * GI + 1) - 1;
+            uint bi = offset * (2 * GI + 2) - 1;
+
+            localPrefixSum[bi] += localPrefixSum[ai];
+        }
+        offset *= 2;
+    }
+    GroupMemoryBarrierWithGroupSync();
+    // clear last num
+    if (GI == 0)
+    {
+        localPrefixSum[totalNum - 1] = 0;
+    }
+    GroupMemoryBarrierWithGroupSync();
+    for (d = 1; d < totalNum; d *= 2)
+    {
+        offset >>= 1;
+        GroupMemoryBarrierWithGroupSync();
+
+        if (GI < d)
+        {
+            uint ai = offset * (2 * GI + 1) - 1;
+            uint bi = offset * (2 * GI + 2) - 1;
+
+            uint tmp = localPrefixSum[ai];
+            localPrefixSum[ai] = localPrefixSum[bi];
+            localPrefixSum[bi] += tmp;
+        }
+    }
+    GroupMemoryBarrierWithGroupSync();
+}
+
+void CalculateLocalPrefixSum(int GI, int mask)
+{
+    if (localData[GI] == mask)
+        localPrefixSum[GI] = localMask[GI];
+    GroupMemoryBarrierWithGroupSync();
+}
+
+int CalculateGlobalPosition(int id, int Gid, int num)
+{
+    
+    return _BlockPrefixSumData[num * _ThreadGroupCount + Gid] + _DebugData[id];
+}
+
+void CalculateGlobalPrefixSum()
+{
+    
+}
+int _Digit;
+
+[numthreads(64, 1, 1)]
+void ExecuteRadixSort(uint3 id : SV_DispatchThreadID, uint inBlockID : SV_GroupIndex, uint3 groupID : SV_GroupID)
+{
+    int localIndex = id.x - inBlockID.x;
+    //localData[inBlockID] = GetDigit(_HashTable[id.x],_Digit);
+    localData[inBlockID] = get4Bits(_HashTable[id.x], _Digit);
+    //localData[inBlockID] = _HashTable[id.x]%10;
+    if (id.x < _ThreadGroupCount * 16)
+        _BlockData[id.x] = 0;
+    DeviceMemoryBarrierWithGroupSync();
+    [unroll]
+    for (int t = 0; t < 16; t++)
+    {
+        CalculateMask(inBlockID.x, t);
+        CalculateMaskPrefixSum(inBlockID.x);
+        if (inBlockID == 63)
+        {
+            if (localData[inBlockID] == t)
+            {
+                _BlockData[t * _ThreadGroupCount + groupID.x]++;
+            }
+            _BlockData[t * _ThreadGroupCount + groupID.x] += localMask[inBlockID.x];
+        }
+        CalculateLocalPrefixSum(inBlockID.x, t);
+    }
+    _DebugData[id.x] = localPrefixSum[inBlockID.x];
+    
+}
+
+
+
+[numthreads(64, 1, 1)]
+void CalculateGlobalPrefixSum(uint3 id : SV_DispatchThreadID, uint GI : SV_GroupIndex, uint3 Gid : SV_GroupID)
+{
+    //load date to shared memort
+    if (id.x < _ThreadGroupCount * 16)
+    {
+        localPrefixSum[GI.x] = _BlockData[id.x];
+    }
+    else
+    {
+        localPrefixSum[GI.x] = 0;
+    }
+    GroupMemoryBarrierWithGroupSync();
+    
+    //calc counter prefix sum
+    CalculateLocalPrefixSum(GI);
+    
+    //ouput 
+    if (id.x < _ThreadGroupCount * 16)
+    {
+        _BlockPrefixSumData[id.x] = localPrefixSum[GI];
+    }
+
+    DeviceMemoryBarrierWithGroupSync();
+
+    if (Gid.x > 0)
+    {
+        //get pred sum
+        int sum = 0;
+        for (uint i = 0; i < Gid.x; ++i)
+        {
+            sum += _BlockPrefixSumData[(i + 1) * 64 - 1] + _BlockData[(i + 1) * 64 - 1];
+        }
+        localPrefixSum[GI] += sum;
+
+        DeviceMemoryBarrierWithGroupSync();
+        //output 
+        if (id.x < _ThreadGroupCount * 16)
+        {
+            _BlockPrefixSumData[id.x] = localPrefixSum[GI];
+        }
+    }
+}
+
+[numthreads(64, 1, 1)]
+void SortData(uint3 id : SV_DispatchThreadID, uint GI : SV_GroupIndex, uint3 Gid : SV_GroupID)
+{
+    //int sortData = GetDigit(_HashTable[id.x], _Digit);
+    int sortData = get4Bits(_HashTable[id.x], _Digit);
+    //int sortData = _HashTable[id.x]%10;
+    int globalPosition = _BlockPrefixSumData[sortData * _ThreadGroupCount + Gid.x] + _DebugData[id.x];
+    _SortData[globalPosition] = _HashTable[id.x];
+    AllMemoryBarrierWithGroupSync();
+    //DeviceMemoryBarrierWithGroupSync();
+    _HashTable[id.x] = _SortData[id.x];
+}
+
+[numthreads(64, 1, 1)]
+void Swap(uint3 id : SV_DispatchThreadID)
+{
+    _HashTable[id.x] = _SortData[id.x];
+}
+
+
+
+
+
+groupshared int sharedHash[64 + 1];
+
+[numthreads(64, 1, 1)]
+void CalculateStartAndEndIndex(uint3 DTid : SV_DispatchThreadID, uint GI : SV_GroupIndex)
+{
+    int hashValue = 0;
+    if (DTid.x < _ParticleCount)
+    {
+        hashValue = _HashTable[DTid.x];
+        sharedHash[GI + 1] = hashValue;
+
+        if (GI == 0 && DTid.x > 0)
+        {
+            sharedHash[0] = _HashTable[DTid.x - 1];
+        }
+    }
+
+    GroupMemoryBarrierWithGroupSync();
+
+    if (DTid.x < _ParticleCount)
+    {
+        //If It's equal to the last one
+        if (DTid.x == 0 || hashValue != sharedHash[GI])
+        {
+            _CellStart[hashValue] = DTid.x;
+            if (DTid.x > 0)
+            {
+                //the last cell end pos
+                _CellEnd[sharedHash[GI]] = DTid.x;
+            }
+        }
+        //thread the last one output
+        if (DTid.x == _ParticleCount - 1)
+        {
+            _CellEnd[hashValue] = DTid.x + 1;
+        }
+    }
+}
+
+
+
+
+
+
+
+

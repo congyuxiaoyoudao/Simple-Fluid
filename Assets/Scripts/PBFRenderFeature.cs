@@ -7,6 +7,7 @@ static class ShaderPropertyId
     public static readonly int FluidDepth = Shader.PropertyToID("_FluidDepthTexture"); // Read from previous pass
     public static readonly int FluidIntermediateDepth = Shader.PropertyToID("_FluidIntermediateDepthTexture"); // Compute Shader Output Depth Texture
     public static readonly int FluidSmoothedDepth = Shader.PropertyToID("_FluidSmoothedDepthTexture"); // Smoothed Depth Texture
+    public static readonly int KERNEL_RADIUS = Shader.PropertyToID("_KernelRadius"); 
     public static readonly int INV_2SIGMA_D_SQ = Shader.PropertyToID("_INV_2SIGMA_D_SQ"); 
     public static readonly int INV_2SIGMA_R_SQ = Shader.PropertyToID("_INV_2SIGMA_R_SQ"); 
     public static readonly int FluidNormal = Shader.PropertyToID("_FluidNormalTexture"); // Write to
@@ -19,6 +20,7 @@ static class ShaderPropertyId
 
 public enum DebugPassType
 {
+    FluidParticle,
     FluidDepth,
     FluidSmoothedDepth,
     FluidNormal,
@@ -33,7 +35,8 @@ public class PBFRenderFeature : ScriptableRendererFeature
     [System.Serializable]
     public class PBFRenderPassSettings
     {
-        public RenderPassEvent renderPassEvent = RenderPassEvent.AfterRenderingOpaques;
+        public RenderPassEvent renderShadowMapPassEvent = RenderPassEvent.AfterRenderingShadows;
+        public RenderPassEvent renderPreparePassEvent = RenderPassEvent.AfterRenderingOpaques;
         public RenderPassEvent renderCompositePassEvent = RenderPassEvent.AfterRenderingSkybox;
       
         // TODO: add parameters here
@@ -44,6 +47,7 @@ public class PBFRenderFeature : ScriptableRendererFeature
         [Range(0.01f, 1.0f)]
         public float particleMinDensity = 0.1f;
         public DebugPassType debugPassType;
+        public bool isSceneView = true;
 
         [Header("DepthPass")]
         public Material particleDepthMaterial;
@@ -65,8 +69,13 @@ public class PBFRenderFeature : ScriptableRendererFeature
         
         [Header("CompositePass")]
         public Material particleCompositeMaterial;
+        public Color particleColor = Color.white;
         [Range(1.0f, 2.0f)]
         public float indexOfRefraction = 1.33f; // For water, typically around 1.33
+        [Range(0.0f, 1.0f)]
+        public float refractScalar = 1.0f;
+        [Range(0.0f, 1.0f)]
+        public float turbidity = 0.0f;
         public Color absorptionColor = Color.red;
         public Color scatterColor = Color.cyan;
     }
@@ -74,6 +83,7 @@ public class PBFRenderFeature : ScriptableRendererFeature
     [SerializeField] public PBFRenderPassSettings settings = new PBFRenderPassSettings();
 
     // Pass instances
+    private PBFShadowPass m_PBFShadowPass;
     private PBFRenderDpethPass m_PBFDepthPass;
     private PBFDepthSmoothingPass m_PBFDepthSmoothingPass;
     private PBFReconstructNormalPass m_PBFReconstructNormalPass;
@@ -86,6 +96,7 @@ public class PBFRenderFeature : ScriptableRendererFeature
     private RTHandle m_fluidSmoothedDepthTexture;
     private RTHandle m_fluidNormalTexture;
     private RTHandle m_fluidThicknessTexture;
+    private RTHandle m_fluidShadowMapTexture;
     
     // InstanceBuffer
     private GraphicsBuffer m_instanceBuffer;
@@ -126,26 +137,33 @@ public class PBFRenderFeature : ScriptableRendererFeature
             SetupIndirectArgsBuffer(particleSystem.GetParticleCount());
         }
 
+        // create shadow pass
+        m_PBFShadowPass = new PBFShadowPass("PBF Shadow Pass");
+        m_PBFShadowPass.renderPassEvent = settings.renderShadowMapPassEvent;
+        m_PBFShadowPass.particleMesh = settings.particleMesh;
+        m_PBFShadowPass.particleMaterial = settings.particleDepthMaterial;
+        m_PBFShadowPass.instanceBuffer = m_instanceBuffer;
+        
         // create depth pass
         m_PBFDepthPass = new PBFRenderDpethPass("PBF Depth Render Pass");
-        m_PBFDepthPass.renderPassEvent = settings.renderPassEvent;
+        m_PBFDepthPass.renderPassEvent = settings.renderPreparePassEvent;
         m_PBFDepthPass.particleMesh = settings.particleMesh;
         m_PBFDepthPass.particleMaterial = settings.particleDepthMaterial;
         m_PBFDepthPass.instanceBuffer = m_instanceBuffer;
         
         // create depth smoothing pass
         m_PBFDepthSmoothingPass = new PBFDepthSmoothingPass("PBF Depth Smoothing Pass");
-        m_PBFDepthSmoothingPass.renderPassEvent = settings.renderPassEvent;
+        m_PBFDepthSmoothingPass.renderPassEvent = settings.renderPreparePassEvent;
         m_PBFDepthSmoothingPass.SetComputeShader(settings.depthSmoothingComputeShader);
 
         // Normal Pass
         m_PBFReconstructNormalPass = new PBFReconstructNormalPass("PBF Normal Reconstruct Pass");
-        m_PBFReconstructNormalPass.renderPassEvent = settings.renderPassEvent;
+        m_PBFReconstructNormalPass.renderPassEvent = settings.renderPreparePassEvent;
         m_PBFReconstructNormalPass.SetComputeShader(settings.normalComputeShader);
         
         // Thickness Pass
         m_PBFThicknessPass = new PBFRenderThicknessPass("PBF Thickness Pass");
-        m_PBFThicknessPass.renderPassEvent = settings.renderPassEvent;
+        m_PBFThicknessPass.renderPassEvent = settings.renderPreparePassEvent;
         m_PBFThicknessPass.particleMesh = settings.particleMesh;
         m_PBFThicknessPass.particleMaterial = settings.particleThicknessMaterial;
         m_PBFThicknessPass.instanceBuffer = m_instanceBuffer;
@@ -161,8 +179,13 @@ public class PBFRenderFeature : ScriptableRendererFeature
     // Add pass to render queue
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
     {
-        if (!renderingData.cameraData.isSceneViewCamera)
+        bool desiredCameraView = settings.isSceneView 
+            ? renderingData.cameraData.isSceneViewCamera 
+            : !renderingData.cameraData.isSceneViewCamera;
+
+        if (!desiredCameraView)
             return;
+        
         // ensure that material has been set
         if (settings.particleDepthMaterial == null)
         {
@@ -173,17 +196,16 @@ public class PBFRenderFeature : ScriptableRendererFeature
         var particleSystem = GameObject.FindObjectOfType<ParticleSystem>();
         if (particleSystem != null)
         {
-            m_PBFDepthPass.particleBuffer = particleSystem.GetParticleBuffer();
-            // m_PBFDepthPass.particleCount = particleSystem.GetParticleCount();
+            ComputeBuffer particleBuffer = particleSystem.GetParticleBuffer();
+            m_PBFDepthPass.particleBuffer = particleBuffer;
+            m_PBFThicknessPass.particleBuffer = particleBuffer;
+            m_PBFCompositePass.particleBuffer = particleBuffer;
 
-            m_PBFThicknessPass.particleBuffer = particleSystem.GetParticleBuffer();
-            // m_PBFThicknessPass.particleCount = particleSystem.GetParticleCount();
-            
-            m_PBFCompositePass.particleBuffer = particleSystem.GetParticleBuffer();
-            // m_PBFCompositePass.particleCount = particleSystem.GetParticleCount();
+            ComputeBuffer densityBuffer = particleSystem.GetDensityBuffer();
+            m_PBFCompositePass.densityBuffer = densityBuffer;
         }
         
-        
+        renderer.EnqueuePass(m_PBFShadowPass);
         renderer.EnqueuePass(m_PBFDepthPass);
         renderer.EnqueuePass(m_PBFDepthSmoothingPass);
         renderer.EnqueuePass(m_PBFReconstructNormalPass);
@@ -195,11 +217,15 @@ public class PBFRenderFeature : ScriptableRendererFeature
     {
         var descriptor = renderingData.cameraData.cameraTargetDescriptor;
      
-        // depth pass
         descriptor.depthBufferBits = 24;
         descriptor.graphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.R32_SFloat;
         descriptor.sRGB = false;
         descriptor.msaaSamples = 1;
+        
+        // shadow pass
+        m_PBFShadowPass.Setup(settings.particleSize);
+        
+        // depth pass
         RenderingUtils.ReAllocateIfNeeded(ref m_fluidDepthTexture, descriptor, name: "_FluidDepthTexture");
         m_PBFDepthPass.Setup(m_fluidDepthTexture, settings.particleSize);
         
@@ -211,6 +237,7 @@ public class PBFRenderFeature : ScriptableRendererFeature
         m_PBFDepthSmoothingPass.Setup(m_fluidDepthTexture,
                                       m_fluidIntermediateDepthTexture,
                                       m_fluidSmoothedDepthTexture,
+                                      settings.kernelRadius,
                                       settings.sigmaD,
                                       settings.sigmaR);
         
@@ -226,11 +253,12 @@ public class PBFRenderFeature : ScriptableRendererFeature
         m_PBFThicknessPass.Setup(m_fluidThicknessTexture, settings.particleSize, settings.thicknessScalar);
         
         // final composite pass
-        m_PBFCompositePass.Setup(m_fluidNormalTexture,
-                                 m_fluidThicknessTexture,
-                       renderingData.cameraData.renderer.cameraColorTargetHandle, 
-                                 settings.particleSize, 
+        m_PBFCompositePass.Setup(settings.particleSize, 
+                                 settings.particleMinDensity,
+                                 settings.refractScalar,
                                  settings.indexOfRefraction,
+                                 settings.turbidity,
+                                 settings.particleColor,
                                  settings.absorptionColor,
                                  settings.scatterColor,
                                  settings.debugPassType);
