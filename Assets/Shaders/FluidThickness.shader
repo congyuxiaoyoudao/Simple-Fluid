@@ -101,7 +101,6 @@ Shader "PBF/FluidThickness"
                 // Compute sphere normal
                 float3 sphereNormalVS = ComputeSphereNormal(quadUV);
                 
-                // TODO: add a scalar to scale thickness
                 float thickness = 0.5 * sphereNormalVS.z * _ThicknessScalar;
                 
                 return float4(thickness.xxx,1.0);
