@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 82d0149fab4ce784f92dc9c5f662fe9f, type: 3}
   m_Name: PBFRenderFeature
   m_EditorClassIdentifier: 
-  m_Active: 1
+  m_Active: 0
   settings:
     renderShadowMapPassEvent: 100
     renderPreparePassEvent: 300
