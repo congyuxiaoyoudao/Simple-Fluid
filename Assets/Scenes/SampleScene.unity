@@ -483,7 +483,7 @@ MonoBehaviour:
   viscosityStrength: 0.1
   computeShader: {fileID: 7200000, guid: d2e4cf3e958aa654abdb9dcef4f638b1, type: 3}
   debugMaterial: {fileID: 2100000, guid: 393b2b7a25efe094eb6e8844f554d285, type: 2}
-  particleMesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
+  particleMesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   hashTestGO: {fileID: 0}
   onGizmos: 0
 --- !u!1001 &939854804
