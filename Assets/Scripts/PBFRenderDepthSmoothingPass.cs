@@ -16,7 +16,8 @@ public class PBFDepthSmoothingPass : ScriptableRenderPass
     private RTHandle _intermediateDepthTexture;
     private RTHandle _smoothedDepthTexture;
 
-    // material parameters
+    // compute shader parameters
+    private int _kernelRadius;
     private float _sigmaD = 1.0f;
     private float _sigmaR = 1.0f;
     
@@ -27,11 +28,12 @@ public class PBFDepthSmoothingPass : ScriptableRenderPass
         m_ProfilingSampler = new(m_ProfilerTag);
     }
 
-    public void Setup(RTHandle depthTexture, RTHandle intermediateDepthTexture, RTHandle smoothedDepthTexture, float sigmaD, float sigmaR)
+    public void Setup(RTHandle depthTexture, RTHandle intermediateDepthTexture, RTHandle smoothedDepthTexture, int kernelRadius, float sigmaD, float sigmaR)
     {
         _depthTexture = depthTexture;
         _intermediateDepthTexture = intermediateDepthTexture;
         _smoothedDepthTexture = smoothedDepthTexture;
+        _kernelRadius = kernelRadius;
         _sigmaD = sigmaD;
         _sigmaR = sigmaR;
     }
@@ -68,6 +70,7 @@ public class PBFDepthSmoothingPass : ScriptableRenderPass
         int height = cameraData.cameraTargetDescriptor.height;
         cmd.SetComputeVectorParam(depthSmoothingComputeShader, ShaderPropertyId.ScreenParams, new Vector2(width, height));
         
+        cmd.SetComputeIntParam(depthSmoothingComputeShader, ShaderPropertyId.KERNEL_RADIUS, _kernelRadius);
         cmd.SetComputeFloatParam(depthSmoothingComputeShader, ShaderPropertyId.INV_2SIGMA_D_SQ, 1.0f / (2.0f * _sigmaD * _sigmaR));
         cmd.SetComputeFloatParam(depthSmoothingComputeShader, ShaderPropertyId.INV_2SIGMA_R_SQ, 1.0f / (2.0f * _sigmaR * _sigmaR));
         
